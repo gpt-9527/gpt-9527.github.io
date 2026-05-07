@@ -4,10 +4,9 @@ on:
   push:
     branches: [dev]
 
-# 添加全局环境变量来提前进入 Node.js 24 环境
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24.11.0' # 已修改为目标版本
+          node-version: '24.11.0'
           cache: 'npm'
 
       - name: Install dependencies
@@ -69,7 +68,9 @@ jobs:
           # 从临时目录复制 dist 内容到 main 根目录
           if [ -d "/tmp/dist" ] && [ "$(ls -A /tmp/dist)" ]; then
             cp -r /tmp/dist/* . || true
-            echo "Copied dist contents to main"
+            # 关键修复：添加 .nojekyll 文件防止 Jekyll 忽略资源文件
+            touch .nojekyll
+            echo "Copied dist contents and created .nojekyll"
           else
             echo "No dist contents to copy - failing"
             exit 1
