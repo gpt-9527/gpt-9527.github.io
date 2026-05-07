@@ -3,7 +3,7 @@ name: 王海滢自行发布专用Actions
 on:
   push:
     branches: [dev]
-    
+
 # 添加全局环境变量来提前进入 Node.js 24 环境
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -35,7 +35,7 @@ jobs:
       - name: Debug build output
         run: ls -la dist/ || echo "dist not found"
 
-      - name: Deploy dist to master branch
+      - name: Deploy dist to main branch
         run: |
           set -e
           # 配置 Git
@@ -56,20 +56,20 @@ jobs:
           rm -rf dist/
           git clean -fd || true
 
-          # 检出 master 分支
+          # 检出 main 分支
           git fetch origin
-          git checkout master || git checkout -b master
-          echo "Switched to master branch"
+          git checkout main || git checkout -b main
+          echo "Switched to main branch"
 
-          # 清理 master 根目录（保留 .git）
+          # 清理 main 根目录（保留 .git）
           git rm -rf . --ignore-unmatch || true
           git clean -fdx -e .git || true
-          echo "Cleaned master directory"
+          echo "Cleaned main directory"
 
-          # 从临时目录复制 dist 内容到 master 根目录
+          # 从临时目录复制 dist 内容到 main 根目录
           if [ -d "/tmp/dist" ] && [ "$(ls -A /tmp/dist)" ]; then
             cp -r /tmp/dist/* . || true
-            echo "Copied dist contents to master"
+            echo "Copied dist contents to main"
           else
             echo "No dist contents to copy - failing"
             exit 1
@@ -81,8 +81,8 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: update dist from dev build [skip ci]"
-            git push origin master
-            echo "Pushed changes to master"
+            git push origin main
+            echo "Pushed changes to main"
           fi
 
           # 清理临时目录
