@@ -1,0 +1,85 @@
+name: 王海滢自行发布专用Actions
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run build
+        run: npm run build
+
+      - name: Debug build output
+        run: ls -la dist/ || echo "dist not found"
+
+      - name: Deploy dist to master branch
+        run: |
+          set -e
+          # 配置 Git
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          # 备份 dist 到临时目录
+          mkdir -p /tmp/dist
+          if [ -d "dist" ]; then
+            cp -r dist/* /tmp/dist/ || true
+            echo "Backed up dist to /tmp/dist"
+          else
+            echo "dist not found - failing"
+            exit 1
+          fi
+
+          # 清理本地变更
+          rm -rf dist/
+          git clean -fd || true
+
+          # 检出 master 分支
+          git fetch origin
+          git checkout master || git checkout -b master
+          echo "Switched to master branch"
+
+          # 清理 master 根目录（保留 .git）
+          git rm -rf . --ignore-unmatch || true
+          git clean -fdx -e .git || true
+          echo "Cleaned master directory"
+
+          # 从临时目录复制 dist 内容到 master 根目录
+          if [ -d "/tmp/dist" ] && [ "$(ls -A /tmp/dist)" ]; then
+            cp -r /tmp/dist/* . || true
+            echo "Copied dist contents to master"
+          else
+            echo "No dist contents to copy - failing"
+            exit 1
+          fi
+
+          # 提交并推送
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update dist from dev build [skip ci]"
+            git push origin master
+            echo "Pushed changes to master"
+          fi
+
+          # 清理临时目录
+          rm -rf /tmp/dist
