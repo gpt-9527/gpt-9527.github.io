@@ -1,10 +1,11 @@
 <template>
     <header class="glass-header">
-      <div class="logo">🚀 博客128</div>
+      <div class="logo">🚀 博客</div>
       <nav>
         <a href="#Home">首页</a>
         <a href="#Imgs">图片</a>
         <a href="#Video">视频</a>
+        <a href="#GuangYaPan">光鸭盘</a>
         <a href="/admin.html" class="btn-primary">管理</a>
       </nav>
     </header>

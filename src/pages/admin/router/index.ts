@@ -38,6 +38,12 @@ const routes: Array<RouteRecordRaw> = [
                 name: 'Video',
                 component: import('../views/Video.vue'),
                 meta: { requiresAuth: true }
+            },
+            {
+                path: 'GuangYaPan',
+                name: 'GuangYaPan',
+                component: import('../views/GuangYaPan.vue'),
+                meta: { requiresAuth: true }
             }
         ]
     }
@@ -61,3 +67,4 @@ router.beforeEach((to, _from, next) => {
 })
 
 export default router
+

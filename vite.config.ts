@@ -31,5 +31,15 @@ export default defineConfig({
         admin: resolve(__dirname, 'admin.html')
       }
     }
+  },
+  server: {
+    proxy: {
+      // 匹配所有以 /api 开头的请求
+      '/api': {
+        target: 'https://api.guangyapan.com', // 目标接口域名
+        changeOrigin: true,                 // 允许跨域
+        rewrite: (path) => path.replace(/^\/api/, '') // 把 /api 替换为空
+      }
+    }
   }
 })

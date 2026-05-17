@@ -23,6 +23,10 @@
           <el-icon><VideoCamera /></el-icon>
           <span>Video</span>
         </el-menu-item>
+        <el-menu-item index="25" @click="handleCommand('/setting/GuangYaPan')">
+          <el-icon><Platform /></el-icon>
+          <span>GuangYaPan</span>
+        </el-menu-item>
         <el-menu-item index="39" @click="handleCommand('setting')">
           <el-icon><Setting /></el-icon>
           <span>Settings</span>
