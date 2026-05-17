@@ -1,6 +1,6 @@
 <template>
     <header class="glass-header">
-      <div class="logo">🚀 博客</div>
+      <div class="logo">🚀 博客128</div>
       <nav>
         <a href="#Home">首页</a>
         <a href="#Imgs">图片</a>
