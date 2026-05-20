@@ -34,11 +34,16 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // 匹配所有以 /api 开头的请求
-      '/api': {
-        target: 'https://api.guangyapan.com', // 目标接口域名
-        changeOrigin: true,                 // 允许跨域
-        rewrite: (path) => path.replace(/^\/api/, '') // 把 /api 替换为空
+      // 匹配前端代码中以 /video-stream 开头的请求
+      '/video-stream1': {
+        target: 'https://hwsh01-httpdown.guangyacdn.com/', // 远程视频流、摄像头或 TS 文件的真正基地址
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/video-stream1/, '') // 移除前缀
+      },
+      '/video-stream2': {
+        target: 'https://hwsh02-httpdown.guangyacdn.com/', // 远程视频流、摄像头或 TS 文件的真正基地址
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/video-stream2/, '') // 移除前缀
       }
     }
   }

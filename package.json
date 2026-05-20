@@ -4,14 +4,22 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite --host --port 4173",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview --port 4172"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "demuxer": "^2.3.0",
     "element-plus": "^2.13.6",
     "jsmpeg-player": "^3.0.3",
+    "mpegts.js": "^1.8.0",
+    "v-lazy-image": "^2.1.1",
+    "v-viewer": "^3.0.23",
+    "viewerjs": "^1.11.7",
     "vue": "^3.5.30",
     "vue-router": "^5.0.4",
     "xgplayer": "^3.0.24",

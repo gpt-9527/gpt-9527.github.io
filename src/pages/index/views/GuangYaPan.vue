@@ -27,25 +27,16 @@
                         <template v-if="value.resType === 1">
                             <li @click="handleShow(value)">
                                 <div class="fileicon" >
-                                    <template alt="视频" v-if="value.mineType === 'video/mp4'">
-                                        <img :src="value.thumbnail" alt="">
+                                    <template alt="视频" v-if="SHOW_VIDEO_TYPES.includes(value.mineType as any)">
+                                        🎞️
                                     </template>
-                                    <template alt="txt" v-else-if="value.mineType === 'text/plain; charset=utf-8'">
+                                    <template alt="图片" v-else-if="SHOW_IMAGE_TYPES.includes(value.mineType as any)">
+                                        <v-lazy-image :src="value.thumbnail" :src-placeholder="lazyimg" alt="" />
+                                    </template>
+                                    <template alt="文档" v-else-if="SHOW_DOCUMENT_TYPES.includes(value.mineType as any)">
                                         📄
                                     </template>
-                                    <template alt="图片" v-else-if="value.mineType === 'image/jpeg'">
-                                        <img :src="value.thumbnail" alt="">
-                                    </template>
-                                    <template alt="视频" v-else-if="value.mineType === 'application/octet-stream'">
-                                        🎞️
-                                    </template>
-                                    <template alt="视频" v-else-if="value.mineType === 'video/mpegts'">
-                                        🎞️
-                                    </template>
-                                    <template alt="视频" v-else-if="value.mineType === 'video/mpeg'">
-                                        🎞️
-                                    </template>
-                                    <template alt="图片" v-else>
+                                    <template alt="其他" v-else>
                                         📄
                                     </template>
                                 </div>
@@ -87,41 +78,32 @@ import Footer from '../components/Footer.vue'
 import Pagination from '../components/Pagination.vue'
 
 import { smartFetch } from '../../../utils/smartFetch' // 引入封装的智能 fetch 函数
-import { ref, onMounted, onUnmounted } from 'vue'
-import Player from 'xgplayer';
-import HlsPlugin from 'xgplayer-hls';
-import Mp4Plugin from 'xgplayer-mp4';
-import FlvPlugin from "xgplayer-flv";
-import "xgplayer/dist/index.min.css";
+import { ref, onMounted, onUnmounted ,getCurrentInstance } from 'vue'
 
-// 动态引入 jsmpeg-player，规避 SSR 或一些严格类型校验下的依赖报错
-// @ts-ignore
-import JSMpeg from 'jsmpeg-player'; 
+// 图片预加载插件
+import VLazyImage from "v-lazy-image"
+const lazyimg = "/lazyimg.png" 
 
+// 定义文件项类型，方便后续使用
+import { 
+    IMAGE_TYPES, 
+    VIDEO_TYPES, 
+    DOCUMENT_TYPES, 
+    SHOW_IMAGE_TYPES, 
+    SHOW_VIDEO_TYPES,
+    SHOW_DOCUMENT_TYPES
+} from '../../../common/enum/file'
 
-type FileItem = {
-    auditStatus: number,
-    ctime: number,
-    depth: number,
-    dirType: number,
-    fileId: string
-    fileName: string
-    resType: number,
-    utime: number,
-    mineType: string,
-    thumbnail: string,
-    ext: string,
-    gcid: string,
-    downloadURL: string
-}
-type bodyDataType = {
-    orderBy: number,
-    pageSize: number,
-    parentId: string,
-    sortType: number,
-    page?: number,
-    name?: string
-}
+import loadImage from '../../../common/loadImage'
+
+import { getFileList } from '../../../common/guangyaapi'
+import type { FileItem } from '../../../common/dto/file'
+import type { bodyDataType } from '../../../common/dto/request'
+import type { ResponseData } from '../../../common/dto/response'
+import * as videoPlayer from '../../../common/loadVideo'
+
+const instance = getCurrentInstance();
+const proxy = instance?.proxy as any;
 
 let initialCookies = ref(false)
 let source = ref({
@@ -133,33 +115,17 @@ let showPlayer = ref(false)
 let isMpegFormat = ref(false)
 let currentPage = ref(1) // 当前分页页码
 
-let playerInstance: Player | null = null; // 西瓜播放器实例
-let mpegInstance: any = null;              // JSMpeg 播放器实例
 let pageSize = ref(12); // 每页显示的文件数量
 let searchQuery = ref(''); // 搜索查询字符串
+
 // 关闭播放器并彻底清理所有实例
 const closePlayer = () => {
-    showPlayer.value = false;
-    isMpegFormat.value = false;
-
-    // 销毁西瓜播放器
-    if (playerInstance) {
-        playerInstance.destroy();
-        playerInstance = null;
-    }
-    // 销毁 JSMpeg 播放器
-    if (mpegInstance) {
-        mpegInstance.destroy();
-        mpegInstance = null;
-    }
+    videoPlayer.closePlayer(showPlayer, isMpegFormat)
 }
 
 let cookiesData = localStorage.getItem('cookiesData')
-let token = ''
 if(cookiesData){
-  const parsedCookies = JSON.parse(cookiesData)
   initialCookies.value = true
-  token = parsedCookies.access_token || '';
 }else{
   initialCookies.value = false
 }
@@ -169,15 +135,27 @@ const handleTitleClick = () => {
 }
 
 const handleShow = (value: FileItem) => {
-    if(value.resType === 1){
-        // 文件：扩展了判断，当检测到 video/mpeg 时也进入获取视频流逻辑
-        if(value.mineType === 'video/mpeg' || value.mineType === 'video/mp4' || value.mineType === 'application/octet-stream' || value.mineType === 'video/mpegts'){
-          getVideoData(value.fileId, value.gcid, value.mineType)
-        }else{
-          window.open(value.downloadURL, '_blank')
+    if (value.resType === 1) {
+        // 视频类型
+        if (VIDEO_TYPES.includes(value.mineType as any)) {
+            getVideoData(value)
+            return;
         }
-    }else if(value.resType === 2){
-        depth.value.push({fileName: value.fileName, fileId: value.fileId})
+        // 图片类型
+        if (IMAGE_TYPES.includes(value.mineType as any)) {
+            loadImage(value, proxy.$viewerApi)
+            return;
+        }
+        // 文档类型
+        if (DOCUMENT_TYPES.includes(value.mineType as any)) {
+            window.open(value.downloadURL, '_blank')
+            return;
+        }
+        // 其他类型，直接下载或新窗口打开
+        window.open(value.downloadURL, '_blank')
+    } else if (value.resType === 2) {
+        // 文件夹，进入下一级
+        depth.value.push({ fileName: value.fileName, fileId: value.fileId })
         getData(value.fileId, 1)
     }
 }
@@ -209,31 +187,20 @@ const gohome = () => {
 
 const getData = (id: string = '', page: number = 1,pageSize: number = 12) => {
     currentPage.value = page
-    let url = `https://api.guangyapan.com/userres/v1/file/get_file_list`
-    let bodyData = {
-        "orderBy": 1,
-        "pageSize": pageSize,
-        "parentId": id,
-        "sortType": 1
-        } as bodyDataType
-    if(page !== 1){
-        bodyData.page = page - 1
-    }
-    smartFetch(url, {
-        method: 'POST',
-        body: JSON.stringify(bodyData),
-        headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+    getFileList(id, page, pageSize)
+    .then((raw: string) => {
+        let data: ResponseData<any>;
+        try {
+            data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        } catch (e) {
+            console.error('数据请求失败:', e);
+            return;
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.msg === 'success' && data.data?.list) {
-        source.value = data.data || { list: [], total: 0 }
-      } else {
-        source.value = { list: [], total: 0 }
-      }
+        if (data.msg === 'success' && data.data?.list) {
+            source.value = data.data || { list: [], total: 0 }
+        } else {
+            source.value = { list: [], total: 0 }
+        }
     })
     .catch(error => {
       console.error('Error checking cookies:', error)
@@ -242,8 +209,6 @@ const getData = (id: string = '', page: number = 1,pageSize: number = 12) => {
 
 // 分页切换：使用当前所在的文件夹 ID 重新请求
 const handlePageChange = (page: number) => {
-    // 判断当前是否是搜索状态，如果是则继续使用搜索接口进行分页请求，而不是普通的目录列表接口
-    console.log('Page change triggered:', page, 'Current search query:', searchQuery.value);
     if (searchQuery.value.trim() !== '') {
         searchData(searchQuery.value, page)
     }else{
@@ -253,83 +218,9 @@ const handlePageChange = (page: number) => {
 }
 
 // 获取视频资源并分流渲染
-const getVideoData = (id: string, gcid: string, mimeType: string) => {
-  let url = `https://api.guangyapan.com/userres/v1/file/get_vod_download_url`
-  fetch(url, {
-    method: 'POST',
-    body: JSON.stringify({ fileId: id, gcid: gcid }),
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    }
-  })
-    .then(response => response.json())
-    .then(data => {
-      if (data.msg === 'success' && data.data?.signedURL) {
-        const videoUrl = data.data.signedURL;
-        showPlayer.value = true;
-
-        // 1. 每次载入新视频前，先彻底断开和清理旧的实例
-        if (playerInstance) { playerInstance.destroy(); playerInstance = null; }
-        if (mpegInstance) { mpegInstance.destroy(); mpegInstance = null; }
-
-        // 2. 核心分流机制：通过 mimeType 或链接特征识别 video/mpeg 
-        if (mimeType === 'video/mpeg' || videoUrl.toLowerCase().includes('.mpeg') || videoUrl.toLowerCase().includes('.mpg')) {
-            isMpegFormat.value = true;
-            
-            // 使用 JSMpeg 绑定内部的 canvas 进行 Wasm 软解码渲染
-            mpegInstance = new JSMpeg.VideoElement('#mpeg-canvas', videoUrl, {
-                autoplay: true,
-                loop: false,
-                control: true // 显示 JSMpeg 自带的简易控制条
-            });
-            console.log('JSMpeg 软解播放器初始化成功:', videoUrl);
-            
-        } else {
-            // 3. 非 mpeg 格式，继续走西瓜播放器硬解通道
-            isMpegFormat.value = false;
-            
-            // 【核心修复】：收紧 HLS 的判断逻辑，防止链接中因为带有时间戳参数 &ts=xxxx 导致误判
-            const isRealHls = videoUrl.toLowerCase().includes('.m3u8');
-            let plugins = [];
-            
-            if (isRealHls) {
-                plugins.push(HlsPlugin);
-            } else if (videoUrl.toLowerCase().includes('.mp4')) {
-                plugins.push(Mp4Plugin);
-            } else if (videoUrl.toLowerCase().includes('.flv')) {
-                plugins.push(FlvPlugin);
-            }
-            // 如果像 CDN 下载直链一样没有任何特征后缀，则不传入特定的格式切片插件，直接交由原生内核渲染
-
-            playerInstance = new Player({
-                id: 'mse',
-                url: videoUrl,
-                width: '100%',
-                fluid: true, 
-                autoplay: true,
-                lang: 'zh-cn',
-                plugins: plugins,
-                mp4plugin: isRealHls ? undefined : {
-                    maxBufferLength: 50,
-                    minBufferLength: 10,
-                }
-            });
-
-            // 4. 增加错误监听兜底
-            playerInstance.on('error', (err) => {
-                console.error('西瓜播放器播放发生异常，详情：', err);
-            });
-
-            console.log('西瓜播放器初始化成功，当前是否为 M3U8:', isRealHls, '链接:', videoUrl);
-        }
-      } else {
-        console.log('Video are invalid or expired.')
-      }
-    })
-    .catch(error => {
-      console.error('Error checking Video:', error)
-    })
+const getVideoData = (value: FileItem) => {
+    // 请求获取视频的签名 URL
+    videoPlayer.loadVideo(value, showPlayer, isMpegFormat)
 }
 // 搜索查询
 const searchData = (name: string, page: number = 1, pageSize: number = 12) => {
@@ -346,11 +237,7 @@ const searchData = (name: string, page: number = 1, pageSize: number = 12) => {
     }
     smartFetch(url, {
         method: 'POST',
-        body: JSON.stringify(bodyData),
-        headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-        }
+        body: JSON.stringify(bodyData)
     })
     .then(response => response.json())
     .then(data => {
@@ -387,8 +274,8 @@ onMounted(() => {
 
 onUnmounted(() => {
     // 统一销毁，防止切页面时留有背景音或内存泄漏
-    if (playerInstance) playerInstance.destroy();
-    if (mpegInstance) mpegInstance.destroy();
+    if (videoPlayer.playerInstance) videoPlayer.playerInstance.destroy();
+    if (videoPlayer.mpegtsPlayerInstance) videoPlayer.mpegtsPlayerInstance.destroy();
 })
 </script>
 
