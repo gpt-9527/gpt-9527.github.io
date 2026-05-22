@@ -6,9 +6,9 @@ import type { ResponseData } from './dto/response';
 import { getVideoOriginalUrl, getFileDetail } from './guangyaapi';
 
 import Player from 'xgplayer';
-import HlsPlugin from 'xgplayer-hls';
+// import HlsPlugin from 'xgplayer-hls';
 import Mp4Plugin from 'xgplayer-mp4';
-import FlvPlugin from "xgplayer-flv";
+// import FlvPlugin from "xgplayer-flv";
 import "xgplayer/dist/index.min.css";
 import mpegts from 'mpegts.js';
 
