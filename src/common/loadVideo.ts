@@ -6,17 +6,17 @@ import type { ResponseData } from './dto/response';
 import { getVideoOriginalUrl, getFileDetail } from './guangyaapi';
 
 import Player from 'xgplayer';
-// import HlsPlugin from 'xgplayer-hls';
+import HlsPlugin from 'xgplayer-hls';
 import Mp4Plugin from 'xgplayer-mp4';
-// import FlvPlugin from "xgplayer-flv";
+import FlvPlugin from "xgplayer-flv";
 import "xgplayer/dist/index.min.css";
 import mpegts from 'mpegts.js';
 
 // avi 格式
 import { FfmpegService } from './ffmpeg-service';
+import { aviToMp4 } from './aviToMp4';
 
 let ffmpegService: FfmpegService | null = null;
-
 // 统一管理所有的播放器/解码器实例
 export let playerInstance: Player | null = null;       // 西瓜播放器实例
 export let mpegtsPlayerInstance: any = null;                  // mpegts 实例
@@ -69,7 +69,6 @@ function clearActiveInstances(): void {
     const container = document.getElementById('mse');
     if (container) { container.innerHTML = ''; }
 }
-
 
 /**
  * @description: 经过修复与寻址锁优化的 MPEG-TS 专用加载器 (已补全播放/暂停、音量、双全屏及控制条自动隐藏)
@@ -604,7 +603,6 @@ function mpegtsTOLoadVideo(videoDetail: any, videoUrl: string): void {
     });
 }
 
-import { aviToMp4 } from './aviToMp4';
 /**
  * @description: 经过修复与寻址锁优化的 AVI 专用加载器
  */
@@ -639,10 +637,49 @@ function _loadVideoWithFormat(videoDetail: any, videoUrl: string, showPlayer: { 
     else if (videoDetail.mimeType === 'video/mpegts') {
         mpegtsTOLoadVideo(videoDetail, videoUrl);
     }
+    // ================== 4. video/mpegts 基于 mkv格式居多 格式 ==================
     else if (videoDetail.mimeType === 'video/MP2T') {
+        // mpegtsTOLoadVideo(videoDetail, videoUrl);
+        isMpegFormat.value = false;
+        playerInstance = new Player({
+            id: 'mse', 
+            url: videoUrl, 
+            width: '100%', 
+            fluid: true, 
+            autoplay: true, 
+            lang: 'zh-cn'
+        });
+    }
+    // ================== 5. video/x-matroska 基于 mkv格式居多 格式 ==================
+    else if (videoDetail.mimeType === 'video/x-matroska') {
+        isMpegFormat.value = false;
+        playerInstance = new Player({
+            id: 'mse', 
+            url: videoUrl, 
+            width: '100%', 
+            fluid: true, 
+            autoplay: true, 
+            lang: 'zh-cn'
+        });
+    }
+    // ================== 5. video/webm 基于 mkv格式居多 格式 ==================
+    else if (videoDetail.mimeType === 'video/webm') {
+        isMpegFormat.value = false;
+        playerInstance = new Player({
+            id: 'mse', 
+            url: videoUrl, 
+            width: '100%', 
+            fluid: true, 
+            autoplay: true, 
+            lang: 'zh-cn'
+        });
+    }
+    // ================== 10. 部分未找到资源 大多基于ts 自定义格式 ==================
+    else if (videoDetail.mimeType === 'application/octet-stream') {
+        console.warn('未识别的视频格式，尝试使用通用播放器核心逻辑 application/octet-stream');
         mpegtsTOLoadVideo(videoDetail, videoUrl);
     }
-    // ================== 4. AVI 格式 ==================
+    // ================== 11. AVI 格式 ==================
     else if (videoDetail.mimeType === 'video/x-msvideo') {
         aviToMp4LoadVideo(videoDetail, videoUrl,isMpegFormat);
     }
@@ -660,13 +697,16 @@ export function loadVideo(value: FileItem, showPlayer: { value: boolean }, isMpe
         try {
             detailData = typeof detailRaw === 'string' ? JSON.parse(detailRaw) : detailRaw;
             if(detailData.msg === 'success' && detailData.data?.videoResource){
-                detailData.data.videoResource.sort((a: any, b: any) => {
-                    if (a.info.videoType === 'mp4') return -1;
-                    if (b.info.videoType === 'mp4') return 1;
-                    if (a.info.videoType === 'mpegts') return -1;
-                    if (b.info.videoType === 'mpegts') return 1;
-                    return 0;
-                });
+                // 优先级排序：mp4 > matroska,webm > mpegts > 其他格式
+                // detailData.data.videoResource.sort((a: any, b: any) => {
+                //     if (a.info.videoType === 'mp4') return -1;
+                //     if (b.info.videoType === 'mp4') return 1;
+                //     if (a.info.videoType === 'matroska,webm') return -1;
+                //     if (b.info.videoType === 'matroska,webm') return 1;
+                //     if (a.info.videoType === 'mpegts') return -1;
+                //     if (b.info.videoType === 'mpegts') return 1;
+                //     return 0;
+                // });
                 let videoDetail = detailData.data.videoResource[0];
                 if (videoDetail) {
                     getVideoOriginalUrl(value.fileId, videoDetail.gcid).then((raw: string | ResponseData<any>) => {
@@ -682,6 +722,37 @@ export function loadVideo(value: FileItem, showPlayer: { value: boolean }, isMpe
                         }
                     });
                 }
+            }else{
+                // 接口未返回视频资源列表，需要手动自行查询视频资源详情并加载
+                console.warn('接口未返回视频资源详情，尝试使用通用加载逻辑');
+                getVideoOriginalUrl(value.fileId, detailData.data.fileInfo.gcid).then((raw: string | ResponseData<any>) => {
+                    // 处理通用加载逻辑
+                    let data: ResponseData<any>;
+                    try {
+                        data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                        if (data.msg === 'success' && data.data?.signedURL) {
+                            const videoUrl = data.data.signedURL;
+                            let videoDetail = {
+                                gcid: detailData.data.fileInfo.gcid,
+                                info: {
+                                    audioCodec: "aac",
+                                    bitRate: 0,
+                                    defaultResolution: true,
+                                    duration: 0,
+                                    frameRate: 0,
+                                    mimeType: detailData.data.fileInfo.mineType,
+                                    resolution: {width: 600, height: 336},
+                                    resolutionName: "240P",
+                                    videoCodec: "h264",
+                                    videoType: ""
+                                }
+                            };
+                            _loadVideoWithFormat(videoDetail, videoUrl, showPlayer, isMpegFormat);
+                        }
+                    } catch (e) {
+                        console.error('视频原始链接解析失败:', e);
+                    }
+                });
             }
         } catch (e) {
             console.error('文件详情解析失败:', e);

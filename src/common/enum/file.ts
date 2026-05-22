@@ -12,6 +12,7 @@ export const IMAGE_TYPES = [
     'image/gif',
     'image/png',
     'image/webp',
+    'video/image2'
 ] as const;
 
 export const VIDEO_TYPES = [
@@ -23,6 +24,8 @@ export const VIDEO_TYPES = [
     'application/octet-stream',
     'video/x-matroska',
     'video/x-msvideo',
+    'video/webm',
+    'video/MP2T',
 ] as const;
 
 export const DOCUMENT_TYPES = [
@@ -42,10 +45,12 @@ export const SHOW_IMAGE_TYPES = [
     'video/x-matroska',
     'video/x-msvideo',
     'video/mpegts',
+    'video/webm',
+    'video/MP2T',
+
 ] as const;
 
 export const SHOW_VIDEO_TYPES = [
-    'video/webm',
     'video/ogg',
     'video/mpeg',
     'application/octet-stream',

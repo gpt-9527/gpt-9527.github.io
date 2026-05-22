@@ -18,7 +18,7 @@
         <div class="main-content">
             <div class="mune">
                 <span @click="gohome()">首页</span>
-                <span v-if="depth.length >2 " @click="goPrev()">上一页- {{ depth[depth.length - 2].fileName }}</span>
+                <span @click="goPrev(index)" v-for="(value,index) in depth" v-show="index > 0" :key="value.fileId">> {{ value.fileName }}</span>
                 <input name="searchQuery" type="text" placeholder="快速查询文件" v-model="searchQuery" @keydown.enter="handleSearch" />
             </div>
             <div v-if="initialCookies" class="success-state">
@@ -82,7 +82,7 @@ import { ref, onMounted, onUnmounted ,getCurrentInstance } from 'vue'
 
 // 图片预加载插件
 import VLazyImage from "v-lazy-image"
-const lazyimg = "/lazyimg.png" 
+const lazyimg = "/lazyimg.jpg" 
 
 // 定义文件项类型，方便后续使用
 import { 
@@ -134,6 +134,7 @@ const handleTitleClick = () => {
   window.location.href = `/admin.html#/GuangYaPan`
 }
 
+// 统一的文件点击处理函数，根据文件类型分流不同的展示或操作逻辑
 const handleShow = (value: FileItem) => {
     if (value.resType === 1) {
         // 视频类型
@@ -160,22 +161,17 @@ const handleShow = (value: FileItem) => {
     }
 }
 
-const goPrev = () => {
-    // 判断当前是否在搜索状态，如果是则直接回到当前目录列表而不是上一级目录
-    if(searchQuery.value.trim() !== ''){
-        searchQuery.value = ''
-        const parentId = depth.value[depth.value.length - 1]?.fileId || ''
-        getData(parentId, 1)
-        return
-    }
-    // 回到上一级目录，弹出路径栈顶元素
-    if(depth.value.length > 1){
-        depth.value.pop()
-        const prev = depth.value[depth.value.length - 1]
-        getData(prev.fileId, 1)
-    }
+// 路径导航点击，直接跳转到对应目录
+const goPrev = (idx: number) => {
+    // 判断点击的路径索引是否在当前路径栈范围内，防止越界
+    if (idx === depth.value.length - 1) return; // 点击当前目录，无需操作
+    // 通过点击的索引直接切换到对应目录，更新路径栈
+    depth.value = depth.value.slice(0, idx + 1)
+    const target = depth.value[depth.value.length - 1]
+    getData(target.fileId, 1)
 }
 
+// 首页点击，重置路径栈并请求根目录数据
 const gohome = () => {
     // 回到根目录，重置路径栈
     depth.value = [{fileName: '', fileId: ''}]
@@ -184,7 +180,7 @@ const gohome = () => {
     // 直接调用 getData 请求根目录数据，避免重复逻辑
     getData('', 1)
 }
-
+// 获取文件列表的统一函数，支持分页和目录切换
 const getData = (id: string = '', page: number = 1,pageSize: number = 12) => {
     currentPage.value = page
     getFileList(id, page, pageSize)
@@ -224,6 +220,7 @@ const getVideoData = (value: FileItem) => {
 }
 // 搜索查询
 const searchData = (name: string, page: number = 1, pageSize: number = 12) => {
+    // 搜索时分页会跳转到对应页码，更新当前页码状态
     currentPage.value = page
     let url = `https://api.guangyapan.com/userres/v1/file/search_files`
     let bodyData = {
@@ -261,7 +258,11 @@ const handleSearch = (event: KeyboardEvent) => {
             getData(parentId, 1)
         }else{
             // 否则执行搜索
-            searchData(searchQuery.value, 1)    
+            // 清除路径导航，进入搜索结果状态
+            depth.value = [{ fileName: `搜索: ${searchQuery.value}`, fileId: '' }]
+            searchData(searchQuery.value, 1)
+            // 清除搜索框输入，保持界面整洁
+            searchQuery.value = ''
         }
     }
 }
@@ -355,6 +356,11 @@ ul,li{
     gap: 20px;
     margin: 20px 0;
     width: calc(100% - 120px);
+}
+.mune span {
+    cursor: pointer;
+    color: #94a3b8;
+    transition: color 0.2s;
 }
 .success-state{
     background: rgba(255, 255, 255, 0.05);
