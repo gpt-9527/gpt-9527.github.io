@@ -39,7 +39,7 @@ export const getVideoOriginalUrl = async (fileId: string, gcid: string): Promise
 };
 
 // 查询文档详情接口
-export const getDocumentOriginalUrl = async (fileId: string, gcid: string): Promise<string> => {
+export const getDocumentOriginalUrl = async (fileId: string): Promise<string> => {
     let url = `https://api.guangyapan.com/userres/v1/get_res_download_url`
     let bodyData = { fileId: fileId }
     try {

@@ -1186,7 +1186,7 @@ export default function loadDocument(value: FileItem): void {
         console.log('文档信息获取成功:', data);
         
         const fileInfo = data.data.fileInfo;
-        getDocumentOriginalUrl(fileInfo.fileId, fileInfo.gcid)
+        getDocumentOriginalUrl(fileInfo.fileId)
           .then((raw: string) => {
             let filedata: ResponseData<any>;
             try {
