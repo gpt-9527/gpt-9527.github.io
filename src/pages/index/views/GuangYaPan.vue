@@ -95,12 +95,14 @@ import {
 } from '../../../common/enum/file'
 
 import loadImage from '../../../common/loadImage'
+import loadDocument from '../../../common/loadDocument'
 
 import { getFileList } from '../../../common/guangyaapi'
 import type { FileItem } from '../../../common/dto/file'
 import type { bodyDataType } from '../../../common/dto/request'
 import type { ResponseData } from '../../../common/dto/response'
 import * as videoPlayer from '../../../common/loadVideo'
+
 
 const instance = getCurrentInstance();
 const proxy = instance?.proxy as any;
@@ -149,7 +151,7 @@ const handleShow = (value: FileItem) => {
         }
         // 文档类型
         if (DOCUMENT_TYPES.includes(value.mineType as any)) {
-            window.open(value.downloadURL, '_blank')
+            loadDocument(value)
             return;
         }
         // 其他类型，直接下载或新窗口打开

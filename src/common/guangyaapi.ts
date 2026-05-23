@@ -38,6 +38,23 @@ export const getVideoOriginalUrl = async (fileId: string, gcid: string): Promise
     }
 };
 
+// 查询文档详情接口
+export const getDocumentOriginalUrl = async (fileId: string, gcid: string): Promise<string> => {
+    let url = `https://api.guangyapan.com/userres/v1/get_res_download_url`
+    let bodyData = { fileId: fileId }
+    try {
+        const response = await smartFetch(url, {
+            method: 'POST',
+            body: JSON.stringify(bodyData)
+        });
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching document original URL:', error);
+        throw new Error('Failed to fetch document original URL');
+    }
+};
+
 // 获取文件列表接口
 export const getFileList = async (id: string = '', page: number = 1,pageSize: number = 12): Promise<string> => {
     let url = `https://api.guangyapan.com/userres/v1/file/get_file_list`

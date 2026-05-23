@@ -30,6 +30,10 @@ export const VIDEO_TYPES = [
 
 export const DOCUMENT_TYPES = [
     'text/plain; charset=utf-8',
+    'text/plain; charset=utf-16le',
+    'text/plain; charset=utf-16be',
+    'text/plain; charset=iso-8859-1',
+    'text/plain; charset=gbk',
     'application/zip',
     'application/pdf',
     'application/msword',
