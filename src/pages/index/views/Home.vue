@@ -2,6 +2,14 @@
     <div class="portal-container">
       <Header></Header>
       <main>
+        <div>
+          <h2 style="height: 80px;line-height: 80px;">欣赏大厨视频</h2>
+          <div>
+            <p style="text-align: left;height: 40px;line-height: 40px;">大厨大鱼人</p>
+            <video controls width="100%" height="auto" src="/static/video/20260527.mp4"></video>
+          </div>
+        </div>
+
         <section class="hero">
             <div class="hero-content">
             <h1>Welcome to the Future of Managing</h1>
@@ -13,7 +21,7 @@
             <div class="abstract-shape shape-2"></div>
             </div>
         </section>
-
+        
         <section id="features" class="features">
             <h2>Why Choose Us</h2>
             <div class="feature-grid">
