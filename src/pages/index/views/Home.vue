@@ -6,7 +6,8 @@
           <h2 style="height: 80px;line-height: 80px;">欣赏大厨视频</h2>
           <div>
             <p style="text-align: left;height: 40px;line-height: 40px;">大厨大鱼人</p>
-            <video controls width="100%" height="auto" src="/static/video/20260527.mp4"></video>
+            <!-- <video controls width="100%" height="auto" src="/static/video/20260527.mp4"></video> -->
+            <video controls width="100%" height="auto" preload="metadata" src="https://videotourl.com/videos/1780386436562-0fe2a9f8-2f12-4365-9107-5b403c323532.mp4"></video>
           </div>
         </div>
 
