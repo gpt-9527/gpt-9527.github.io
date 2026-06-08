@@ -27,7 +27,7 @@
           <el-icon><Platform /></el-icon>
           <span>GuangYaPan</span>
         </el-menu-item>
-        <el-menu-item index="39" @click="handleCommand('setting')">
+        <el-menu-item index="39" @click="handleCommand('/setting/Set')">
           <el-icon><Setting /></el-icon>
           <span>Settings</span>
         </el-menu-item>
@@ -54,7 +54,9 @@ if(router.currentRoute.value.path === '/dashboard'){
   active.value = '10'
 }else if(router.currentRoute.value.path === '/setting/video'){
   active.value = '22'
-}else if(router.currentRoute.value.path === '/setting'){
+}else if(router.currentRoute.value.path === '/setting/GuangYaPan'){
+  active.value = '25'
+}else if(router.currentRoute.value.path === '/setting/Set'){
   active.value = '39'
 }
 </script>

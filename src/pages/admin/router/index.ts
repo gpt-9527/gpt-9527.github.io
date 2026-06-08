@@ -44,6 +44,18 @@ const routes: Array<RouteRecordRaw> = [
                 name: 'GuangYaPan',
                 component: import('../views/GuangYaPan.vue'),
                 meta: { requiresAuth: true }
+            },
+            {
+                path: 'User',
+                name: 'User',
+                component: import('../views/User.vue'),
+                meta: { requiresAuth: true }
+            },
+            {
+                path: 'Set',
+                name: 'Set',
+                component: import('../views/Setting.vue'),
+                meta: { requiresAuth: true }
             }
         ]
     }

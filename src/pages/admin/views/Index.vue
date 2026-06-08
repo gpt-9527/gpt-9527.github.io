@@ -32,11 +32,15 @@
     <el-card shadow="never" class="welcome-card">
         <h2>Welcome back, Admin!</h2>
         <p>Here is what's happening with your projects today.</p>
-        <el-button type="primary">View Full Report</el-button>
+        <el-button @click="goHome" type="primary">View Full Go Home</el-button>
     </el-card>
 </template>
 <script setup lang="ts">
 
+const goHome = () => {
+  // Placeholder for navigation logic
+  window.location.href = `/#/`;
+};
 </script>
 <style scoped>
 .card-list {

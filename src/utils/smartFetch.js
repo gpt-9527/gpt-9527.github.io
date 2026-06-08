@@ -19,7 +19,7 @@ const onRerfreshed = (newToken) => {
 
 export function smartFetch(url, options = {}) {
   // 1. 自动注入 Token
-  const token = localStorage.getItem('cookiesData') ? JSON.parse(localStorage.getItem('cookiesData')).access_token : null;
+  const token = localStorage.getItem('gycookies') ? JSON.parse(localStorage.getItem('gycookies')).access_token : null;
   options.headers = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -48,7 +48,7 @@ export function smartFetch(url, options = {}) {
 
               try {
                 // 安全获取本地的 refresh_token
-                const cookiesData = JSON.parse(localStorage.getItem('cookiesData') || '{}');
+                const cookiesData = JSON.parse(localStorage.getItem('gycookies') || '{}');
                 const refreshToken = cookiesData.refresh_token;
 
                 // 调用光鸭盘刷新 Token 的接口
@@ -68,7 +68,7 @@ export function smartFetch(url, options = {}) {
                   console.log('刷新 Token 成功，新的 Access Token:', data);
                   const newToken = data.access_token; 
                   
-                  localStorage.setItem('cookiesData', JSON.stringify({...data}));
+                  localStorage.setItem('gycookies', JSON.stringify({...data}));
                   isRefreshing = false;
 
                   // 【修复点】：刷新成功后，重新执行“当前第一个”请求，并把结果给到外层

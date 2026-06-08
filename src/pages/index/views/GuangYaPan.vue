@@ -1,7 +1,6 @@
 <template>
     <div class="portal-container">
         <Header></Header>
-        
         <!-- 播放器弹窗遮罩，居中悬浮 -->
         <div v-show="showPlayer" class="player-wrapper">
             <!-- 西瓜播放器容器 (MP4, HLS, FLV 等) -->
@@ -14,7 +13,6 @@
             
             <button class="close-btn" @click="closePlayer">关闭播放</button>
         </div>
-
         <div class="main-content">
             <div class="mune">
                 <span @click="gohome()">首页</span>
@@ -125,7 +123,7 @@ const closePlayer = () => {
     videoPlayer.closePlayer(showPlayer, isMpegFormat)
 }
 
-let cookiesData = localStorage.getItem('cookiesData')
+let cookiesData = localStorage.getItem('gycookies')
 if(cookiesData){
   initialCookies.value = true
 }else{
@@ -133,7 +131,7 @@ if(cookiesData){
 }
 
 const handleTitleClick = () => {
-  window.location.href = `/admin.html#/GuangYaPan`
+  window.location.href = `/admin.html#/setting/GuangYaPan`
 }
 
 // 统一的文件点击处理函数，根据文件类型分流不同的展示或操作逻辑
@@ -348,10 +346,10 @@ ul,li{
 /* 保持你其余的网盘 UI 布局样式不变 */
 .main-content {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     flex-direction: column;
-    min-height: calc(100vh - 180px);
+    min-height: calc(100vh - 260px);
 }
 .mune{
     display: flex;
@@ -425,6 +423,7 @@ ul,li{
     text-align: center;
     color: #cbd5e1;
     padding: 4rem 2rem;
+    margin: 4rem 0;
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
