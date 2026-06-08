@@ -36,25 +36,25 @@ const routes: Array<RouteRecordRaw> = [
             {
                 path: 'video',
                 name: 'Video',
-                component: import('../views/Video.vue'),
+                component: () => import('../views/Video.vue'),
                 meta: { requiresAuth: true }
             },
             {
                 path: 'GuangYaPan',
                 name: 'GuangYaPan',
-                component: import('../views/GuangYaPan.vue'),
+                component: () => import('../views/GuangYaPan.vue'),
                 meta: { requiresAuth: true }
             },
             {
                 path: 'User',
                 name: 'User',
-                component: import('../views/User.vue'),
+                component: () => import('../views/User.vue'),
                 meta: { requiresAuth: true }
             },
             {
                 path: 'Set',
                 name: 'Set',
-                component: import('../views/Setting.vue'),
+                component: () => import('../views/Setting.vue'),
                 meta: { requiresAuth: true }
             }
         ]
