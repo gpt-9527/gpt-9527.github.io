@@ -3,7 +3,7 @@
     <el-card shadow="never" class="welcome-card">
       <h2>Welcome to GuangYaPan Management</h2>
       <p>Here you can manage your GuangYaPan settings and data.(copy same as credentials_aMe-8VSlkrbQXpUR)</p>
-      <p>复制类似 credentials_aMe-8VSlkrbQXpUR 的 字段内容(百度搜索复制localstorage值)</p>
+      <p>复制类似 credentials_aMe-8VSlkrbQXpUR 的 字段内容(百度搜索复制localstorage值!)</p>
     </el-card>
     <el-row style="padding: 20px 0;">stro
       <el-col :span="20" :offset="2">
