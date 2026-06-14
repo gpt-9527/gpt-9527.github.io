@@ -1,4 +1,4 @@
-name: 王海滢自行发布专用Actions
+name: 第三方自行发布专用Actions
 
 on:
   push:
