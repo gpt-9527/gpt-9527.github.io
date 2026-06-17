@@ -17,7 +17,13 @@
             <div class="mune">
                 <span @click="gohome()">首页</span>
                 <span @click="goPrev(index)" v-for="(value,index) in depth" v-show="index > 0" :key="value.fileId">> {{ value.fileName }}</span>
-                <input name="searchQuery" type="text" placeholder="快速查询文件" v-model="searchQuery" @keydown.enter="handleSearch" />
+                <el-input 
+                    name="searchQuery" 
+                    type="text" 
+                    placeholder="快速查询文件" 
+                    v-model="searchQuery" 
+                    @keydown.enter="handleSearch">
+                </el-input>
             </div>
             <div v-if="initialCookies" class="success-state">
                 <ul v-if="source.list.length > 0">
@@ -248,8 +254,8 @@ const searchData = (name: string, page: number = 1, pageSize: number = 12) => {
       console.error('Error checking cookies:', error)
     })
 }
-const handleSearch = (event: KeyboardEvent) => {
-    if (event.key === "Enter") {
+const handleSearch = (event: KeyboardEvent | Event) => {
+    if ('key' in event && event.key === "Enter") {
         const target = event.target as HTMLInputElement;
         searchQuery.value = target.value;
         if(searchQuery.value.trim() === ''){

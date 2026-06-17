@@ -6,6 +6,7 @@ declare module '*.vue' {
     export default component
 }
 
+declare module 'v-lazy-image';
 // v-lazy-image 类型声明
 declare module 'v-lazy-image';
 

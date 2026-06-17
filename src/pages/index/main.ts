@@ -6,6 +6,11 @@ import router from './router'
 import Viewer from 'v-viewer'
 import 'viewerjs/dist/viewer.css'
 
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     // 注册 sw.js 脚本，作用域为当前网站根目录
@@ -21,6 +26,10 @@ if ('serviceWorker' in navigator) {
 
 const app = createApp(App)
 app.use(router)
+for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+    app.component(key, component)
+}
+app.use(ElementPlus)
 app.use(Viewer,{
   defaultOptions: {
     zIndex: 9999, // 提高层级，防止被其他元素遮挡

@@ -26,6 +26,7 @@ export const VIDEO_TYPES = [
     'video/x-msvideo',
     'video/webm',
     'video/MP2T',
+    'video/mov',
 ] as const;
 
 export const DOCUMENT_TYPES = [
@@ -51,6 +52,7 @@ export const SHOW_IMAGE_TYPES = [
     'video/mpegts',
     'video/webm',
     'video/MP2T',
+    'video/mov',
 
 ] as const;
 

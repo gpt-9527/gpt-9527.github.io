@@ -3,6 +3,7 @@ import Home from '../views/Home.vue'
 import Imgs from '../views/Imgs.vue'
 import Video from '../views/Video.vue'
 import GuangYaPan from '../views/GuangYaPan.vue'
+import Magnetism from '../views/Magnetism.vue'
 
 const routes: Array<RouteRecordRaw> = [
     {
@@ -28,6 +29,11 @@ const routes: Array<RouteRecordRaw> = [
         path: '/GuangYaPan',
         name: 'GuangYaPan',
         component: GuangYaPan
+    },
+    {
+        path: '/Magnetism',
+        name: 'Magnetism',
+        component: Magnetism
     }
 ]
 

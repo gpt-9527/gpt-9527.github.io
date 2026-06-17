@@ -683,6 +683,20 @@ function _loadVideoWithFormat(videoDetail: any, videoUrl: string, showPlayer: { 
     else if (videoDetail.mimeType === 'video/x-msvideo') {
         aviToMp4LoadVideo(videoDetail, videoUrl,isMpegFormat);
     }
+    // ================== 12. MOV 格式 ==================
+    else if (videoDetail.mimeType === 'video/mov') {
+        isMpegFormat.value = false;
+        playerInstance = new Player({
+            id: 'mse', 
+            url: videoUrl, 
+            width: '100%', 
+            fluid: true, 
+            autoplay: true, 
+            lang: 'zh-cn', 
+            plugins: [Mp4Plugin],
+            mp4plugin: { maxBufferLength: 50, minBufferLength: 10 }
+        });
+    }
     else {
         console.warn('未识别的视频格式，尝试使用通用播放器核心逻辑');
     }

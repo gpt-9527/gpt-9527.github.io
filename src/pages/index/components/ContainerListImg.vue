@@ -25,7 +25,7 @@
 </template>
 
 <script setup>
-// import { defineProps, defineEmits } from 'vue'
+import { defineProps, defineEmits } from 'vue'
 const props = defineProps({
   list: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false }

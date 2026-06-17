@@ -6,6 +6,7 @@
         <a href="#Imgs">图片</a>
         <a href="#Video">视频</a>
         <a href="#GuangYaPan">光鸭盘</a>
+        <a href="#Magnetism">磁力搜索</a>
         <a href="/admin.html" class="btn-primary">管理</a>
       </nav>
     </header>
