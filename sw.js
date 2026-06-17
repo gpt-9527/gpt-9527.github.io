@@ -12,11 +12,11 @@ self.addEventListener('activate', event => {
 // 核心拦截逻辑
 self.addEventListener('fetch', event => {
   const requestUrl = new URL(event.request.url);
-
+  // console.info('SW 收到请求:', event.request.url);
   // 1. 匹配你的视频链接（请根据实际的 URL 特征修改此处）
   // 例如：链接中包含 '/get-video' 或者以特定的无后缀路径结尾
-  if (requestUrl.pathname.includes('/video-stream666')) {
-    console.log('SW 拦截到视频请求:666', event.request.url);
+  if (requestUrl.pathname.includes('httpdown.guangyacdn.com')) {
+    console.log('SW 拦截到视频请求:', event.request.url);
     // 拦截请求，交由自定义的响应处理
     event.respondWith(
       fetch(event.request)
