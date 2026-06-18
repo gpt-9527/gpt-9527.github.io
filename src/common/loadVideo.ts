@@ -639,16 +639,19 @@ function _loadVideoWithFormat(videoDetail: any, videoUrl: string, showPlayer: { 
     }
     // ================== 4. video/mpegts 基于 mkv格式居多 格式 ==================
     else if (videoDetail.mimeType === 'video/MP2T') {
-        // mpegtsTOLoadVideo(videoDetail, videoUrl);
-        isMpegFormat.value = false;
-        playerInstance = new Player({
-            id: 'mse', 
-            url: videoUrl, 
-            width: '100%', 
-            fluid: true, 
-            autoplay: true, 
-            lang: 'zh-cn'
-        });
+        if(videoDetail.videoType === 'mpegts'){
+            mpegtsTOLoadVideo(videoDetail, videoUrl);
+        }else{
+            isMpegFormat.value = false;
+            playerInstance = new Player({
+                id: 'mse', 
+                url: videoUrl, 
+                width: '100%', 
+                fluid: true, 
+                autoplay: true, 
+                lang: 'zh-cn'
+            });
+        }
     }
     // ================== 5. video/x-matroska 基于 mkv格式居多 格式 ==================
     else if (videoDetail.mimeType === 'video/x-matroska') {
@@ -705,7 +708,7 @@ function _loadVideoWithFormat(videoDetail: any, videoUrl: string, showPlayer: { 
 /**
  * 加载并播放视频主入口
  */
-export function loadVideo(value: FileItem, showPlayer: { value: boolean }, isMpegFormat: { value: boolean }): void {
+export function loadVideo(value: FileItem, showPlayer: { value: boolean }, isMpegFormat: { value: boolean }, userinfo: {isVip: boolean}): void {
     getFileDetail(value.fileId).then((detailRaw: string | ResponseData<any>) => {
         let detailData: ResponseData<any>;
         try {
@@ -721,7 +724,14 @@ export function loadVideo(value: FileItem, showPlayer: { value: boolean }, isMpe
                 //     if (b.info.videoType === 'mpegts') return 1;
                 //     return 0;
                 // });
-                let videoDetail = detailData.data.videoResource[0];
+                let videoDetail; 
+                // 判断用户是否是会员
+                if(userinfo.isVip || detailData.data.videoResource.length < 2){
+                    videoDetail = detailData.data.videoResource[0];
+                }else{
+                    videoDetail = detailData.data.videoResource[detailData.data.videoResource.length - 1];
+                }
+                console.log('视频信息:' , videoDetail )
                 if (videoDetail) {
                     getVideoOriginalUrl(value.fileId, videoDetail.gcid).then((raw: string | ResponseData<any>) => {
                         let data: ResponseData<any>;

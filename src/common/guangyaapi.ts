@@ -96,3 +96,20 @@ export const deleteFile = async (fileIds: string[]): Promise<string> => {
     throw new Error('Failed to delete file');
   }
 };
+
+// 查询用户
+export const getAssets = async (): Promise<string> => {
+    let url = `https://api.guangyapan.com/assets/v1/get_assets`;
+    let bodyData = {}
+    try {    
+        const response = await smartFetch(url, {
+        method: 'POST',
+        body: JSON.stringify(bodyData),
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error get assets:', error);
+    throw new Error('Failed to get assets');
+  }
+}

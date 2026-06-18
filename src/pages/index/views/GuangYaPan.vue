@@ -15,7 +15,7 @@
         </div>
         <div class="main-content">
             <div class="mune">
-                <span @click="gohome()">首页</span>
+                <span @click="gohome()" :style="{color: userinfo.isVip ? 'yellow' : ''}">首页</span>
                 <span @click="goPrev(index)" v-for="(value,index) in depth" v-show="index > 0" :key="value.fileId">> {{ value.fileName }}</span>
                 <el-input 
                     name="searchQuery" 
@@ -101,7 +101,7 @@ import {
 import loadImage from '../../../common/loadImage'
 import loadDocument from '../../../common/loadDocument'
 
-import { getFileList } from '../../../common/guangyaapi'
+import { getAssets, getFileList } from '../../../common/guangyaapi'
 import type { FileItem } from '../../../common/dto/file'
 import type { bodyDataType } from '../../../common/dto/request'
 import type { ResponseData } from '../../../common/dto/response'
@@ -111,6 +111,10 @@ import * as videoPlayer from '../../../common/loadVideo'
 const instance = getCurrentInstance();
 const proxy = instance?.proxy as any;
 
+let userinfo = ref({
+    isVip: true,
+    isVipExpired: false
+})
 let initialCookies = ref(false)
 let source = ref({
     list: [] as FileItem[],
@@ -222,7 +226,7 @@ const handlePageChange = (page: number) => {
 // 获取视频资源并分流渲染
 const getVideoData = (value: FileItem) => {
     // 请求获取视频的签名 URL
-    videoPlayer.loadVideo(value, showPlayer, isMpegFormat)
+    videoPlayer.loadVideo(value, showPlayer, isMpegFormat, userinfo.value)
 }
 // 搜索查询
 const searchData = (name: string, page: number = 1, pageSize: number = 12) => {
@@ -275,7 +279,39 @@ const handleSearch = (event: KeyboardEvent | Event) => {
 
 onMounted(() => {
   if (initialCookies.value) {
+    // 获取数据
     getData()
+    // 查询是否是会员
+    getAssets()
+    .then((raw: string) => {
+        let data: ResponseData<any>;
+        try {
+            data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        } catch (e) {
+            console.error('数据请求失败:', e);
+            return;
+        }
+        if (data.msg === 'success' && data.data) {
+            if([null == true ? void 0 : data.data.vipStatus, null == true ? void 0 : data.data.svipStatus].includes(2)){
+                //是会员
+                userinfo.value.isVip = true
+            }else{
+                userinfo.value.isVip = false
+            }
+            if([null == true ? void 0 : data.data.vipStatus, null == true ? void 0 : data.data.svipStatus].includes(3)){
+                //会员过期
+                userinfo.value.isVipExpired = true
+            }else{
+                userinfo.value.isVipExpired = false
+            }
+        } else {
+            source.value = { list: [], total: 0 }
+        }
+    })
+    .catch(error => {
+      console.error('Error checking cookies:', error)
+    })
+    
   }
 })
 
