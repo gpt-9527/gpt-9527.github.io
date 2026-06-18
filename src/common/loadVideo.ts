@@ -16,6 +16,8 @@ import mpegts from 'mpegts.js';
 import { FfmpegService } from './ffmpeg-service';
 import { aviToMp4 } from './aviToMp4';
 
+import { ElMessage } from 'element-plus'
+
 let ffmpegService: FfmpegService | null = null;
 // 统一管理所有的播放器/解码器实例
 export let playerInstance: Player | null = null;       // 西瓜播放器实例
@@ -700,8 +702,13 @@ function _loadVideoWithFormat(videoDetail: any, videoUrl: string, showPlayer: { 
             mp4plugin: { maxBufferLength: 50, minBufferLength: 10 }
         });
     }
+    // ================== 12. WMV 格式 ==================
+    else if(videoDetail.mimeType === 'video/x-ms-asf'){
+        ElMessage.error('该视频格式暂不支持播放！')
+    }
     else {
         console.warn('未识别的视频格式，尝试使用通用播放器核心逻辑');
+        ElMessage.warning('未识别的视频格式，尝试使用通用播放器核心逻辑')
     }
 }
 

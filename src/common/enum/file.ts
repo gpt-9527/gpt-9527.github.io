@@ -24,9 +24,9 @@ export const VIDEO_TYPES = [
     'application/octet-stream',
     'video/x-matroska',
     'video/x-msvideo',
-    'video/webm',
     'video/MP2T',
     'video/mov',
+    'video/x-ms-asf'
 ] as const;
 
 export const DOCUMENT_TYPES = [
@@ -53,7 +53,7 @@ export const SHOW_IMAGE_TYPES = [
     'video/webm',
     'video/MP2T',
     'video/mov',
-
+    'video/x-ms-asf'
 ] as const;
 
 export const SHOW_VIDEO_TYPES = [
