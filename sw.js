@@ -12,6 +12,23 @@ self.addEventListener('activate', event => {
 // 核心拦截逻辑
 self.addEventListener('fetch', event => {
   const requestUrl = new URL(event.request.url);
+  const urlStr = event.request.url;
+  // 1. 精准匹配：只要请求发往谷歌验证 API、Firebase 域名、或者是 Firestore 的数据传输
+  if (
+    urlStr.includes('googleapis.com') || 
+    urlStr.includes('firebase') || 
+    urlStr.includes('firestore.googleapis.com')
+  ) {
+    console.log('✨ [SW 放行] 检测到 Firebase/AppCheck 核心凭证网络请求，绝对不拦截:', urlStr);
+    
+    // 2. 核心修正：使用原生 fetch 显式代理，并强制携带其原有的所有凭证与头部
+    event.respondWith(
+      fetch(event.request, {
+        credentials: event.request.credentials // 极其关键：确保在开发环境下，跨域验证凭证原封不动传给谷歌
+      })
+    );
+    return; // 结束函数，不再往下走任何缓存逻辑
+  }
   // console.info('SW 收到请求:', event.request.url);
   // 1. 匹配你的视频链接（请根据实际的 URL 特征修改此处）
   // 例如：链接中包含 '/get-video' 或者以特定的无后缀路径结尾
