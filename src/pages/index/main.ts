@@ -1,3 +1,15 @@
+// ==================== 必须放在整个文件的最顶部 ====================
+declare global {
+  interface Window {
+    FIREBASE_APPCHECK_DEBUG_TOKEN?: string
+  }
+}
+
+if (import.meta.env.DEV) {
+  window.FIREBASE_APPCHECK_DEBUG_TOKEN = "C0F21AE7-4894-46EE-AC28-865062C997D8";
+  console.log("🚀 [Core] 顶层已成功强制注入 App Check Debug Token:", window.FIREBASE_APPCHECK_DEBUG_TOKEN);
+}
+
 import { createApp } from 'vue'
 import './style.css'
 import App from './App.vue'

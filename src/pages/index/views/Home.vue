@@ -70,15 +70,29 @@ import { ref, onMounted } from 'vue';
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 
+import { supabase } from '../../../utils/supabase'
 const list = ref([]);
+const getData = async () => {
+  const { data, error } = await supabase
+    .from('gpt-9527')
+    .select('*')
+
+  if (error) {
+    console.error(error)
+  }else {
+    list.value = data
+  }
+}
 onMounted(async () => {
+  getData();
+  /*
   try {
     // 通过 import() 动态导入
     const module = await import('/public/static/video/data.ts');
     list.value = module.default;
   } catch (error) {
     console.error('导入配置失败:', error);
-  }
+  }*/
 });
 
 </script>

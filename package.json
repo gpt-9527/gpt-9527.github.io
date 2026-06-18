@@ -16,6 +16,7 @@
     "cfb": "^1.2.2",
     "demuxer": "^2.3.0",
     "element-plus": "^2.13.6",
+    "firebase": "^12.15.0",
     "jsmpeg-player": "^3.0.3",
     "jszip": "^3.10.1",
     "mammoth": "^1.12.0",
