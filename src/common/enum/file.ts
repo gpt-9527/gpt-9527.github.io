@@ -26,7 +26,10 @@ export const VIDEO_TYPES = [
     'video/x-msvideo',
     'video/MP2T',
     'video/mov',
-    'video/x-ms-asf'
+    'video/x-ms-asf',
+    'video/avi',
+    'video/x-m4v',
+    'application/vnd.rn-realmedia-vbr'
 ] as const;
 
 export const DOCUMENT_TYPES = [
@@ -47,19 +50,22 @@ export const DOCUMENT_TYPES = [
 export const SHOW_IMAGE_TYPES = [
     ...IMAGE_TYPES,
     'video/mp4',
+    'video/webm',
+    'video/ogg',
+    'video/mpegts',
     'video/x-matroska',
     'video/x-msvideo',
-    'video/mpegts',
-    'video/webm',
     'video/MP2T',
     'video/mov',
-    'video/x-ms-asf'
+    'video/x-ms-asf',
+    'video/avi',
+    'video/x-m4v'
 ] as const;
 
 export const SHOW_VIDEO_TYPES = [
-    'video/ogg',
     'video/mpeg',
     'application/octet-stream',
+    'application/vnd.rn-realmedia-vbr'
 ] as const;
 
 export const SHOW_DOCUMENT_TYPES = [
