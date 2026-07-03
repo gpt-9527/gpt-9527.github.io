@@ -84,15 +84,14 @@ const getData = async () => {
   }
 }
 onMounted(async () => {
-  getData();
-  /*
+  // getData();
   try {
     // 通过 import() 动态导入
     const module = await import('/public/static/video/data.ts');
     list.value = module.default;
   } catch (error) {
     console.error('导入配置失败:', error);
-  }*/
+  }
 });
 
 </script>
