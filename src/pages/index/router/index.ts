@@ -3,6 +3,7 @@ import Home from '../views/Home.vue'
 import Imgs from '../views/Imgs.vue'
 import Video from '../views/Video.vue'
 import Dota2Video from '../views/Dota2Video.vue'
+import Games from '../views/Games.vue'
 import GuangYaPan from '../views/GuangYaPan.vue'
 import Magnetism from '../views/Magnetism.vue'
 
@@ -30,6 +31,16 @@ const routes: Array<RouteRecordRaw> = [
         path: '/Dota2Video',
         name: 'Dota2Video',
         component: Dota2Video
+    },
+    {
+        path: '/Games',
+        name: 'Games',
+        component: Games
+    },
+    {
+        path: '/Games/RoadRash',
+        name: 'RoadRash',
+        component: () => import('../views/games/RoadRash.vue')
     },
     {
         path: '/GuangYaPan',
