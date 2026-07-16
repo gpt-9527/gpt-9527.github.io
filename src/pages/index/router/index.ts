@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-rou
 import Home from '../views/Home.vue'
 import Imgs from '../views/Imgs.vue'
 import Video from '../views/Video.vue'
+import Dota2Video from '../views/Dota2Video.vue'
 import GuangYaPan from '../views/GuangYaPan.vue'
 import Magnetism from '../views/Magnetism.vue'
 
@@ -24,6 +25,11 @@ const routes: Array<RouteRecordRaw> = [
         path: '/Video',
         name: 'Video',
         component: Video
+    },
+    {
+        path: '/Dota2Video',
+        name: 'Dota2Video',
+        component: Dota2Video
     },
     {
         path: '/GuangYaPan',

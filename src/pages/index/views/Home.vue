@@ -2,32 +2,6 @@
     <div class="portal-container">
       <Header></Header>
       <main>
-        <div>
-          <h2 style="height: 80px;line-height: 80px;">欣赏大厨视频(标注的steamID可以拷贝加入黑名单，提前必坑！)</h2>
-          <div class="video-list">
-            <template v-for="value in list" :key="value.id" >
-              <div v-if="value.isbitch" style="margin-bottom: 40px;">
-                <h6 style="text-align: left;height: 40px;line-height: 40px;">
-                  {{ value.title }} SteamID: <span style="color: red;font-weight: bold;">{{ value.steamID }}</span>
-                </h6>
-                <video controls width="100%" height="auto" preload="metadata" :src="value.url"></video>
-                <p>{{ value.description }}</p>
-              </div>
-            </template>
-          </div>
-          <div class="video-list">
-            <template v-for="value in list" :key="value.id" >
-              <div v-if="!value.isbitch" style="margin-bottom: 40px;">
-                <h6 style="text-align: left;height: 40px;line-height: 40px;">
-                  {{ value.title }} SteamID: <span>{{ value.steamID }}</span>
-                </h6>
-                <video controls width="100%" height="auto" preload="metadata" :src="value.url"></video>
-                <p>{{ value.description }}</p>
-              </div>
-            </template>
-          </div>
-        </div>
-
         <section class="hero">
             <div class="hero-content">
             <h1>Welcome to the Future of Managing</h1>
@@ -66,43 +40,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
-
-import { supabase } from '../../../utils/supabase'
-const list = ref([]);
-const getData = async () => {
-  const { data, error } = await supabase
-    .from('gpt-9527')
-    .select('*')
-
-  if (error) {
-    console.error(error)
-  }else {
-    list.value = data
-  }
-}
-onMounted(async () => {
-  // getData();
-  try {
-    // 通过 import() 动态导入
-    const module = await import('/public/static/video/data.ts');
-    list.value = module.default;
-  } catch (error) {
-    console.error('导入配置失败:', error);
-  }
-});
-
 </script>
 
 <style scoped>
-.video-list{
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  padding: 0 3%;
-}
 .portal-container {
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
