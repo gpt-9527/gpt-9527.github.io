@@ -1,12 +1,10 @@
 import * as THREE from 'three'
 import type { CharacterConfig, HudListener, HudState, MapConfig } from './types'
 import { sampleTrack, trackToWorld } from './track'
-import {
-  createDamageLabel,
-  createHeldWeapon,
-  createSwingEffect,
-  resolveWeapon,
-} from './weapons'
+import { createDamageLabel, createSwingEffect, resolveWeapon } from './weapons'
+import { attachWeaponToArm, createMotorcycle } from './models'
+import { GameAudio } from './audio'
+import { NPC_COUNT } from './maps'
 
 const GLOBAL_MAX_SPEED = 300
 /** 更宽的赛道 */
@@ -16,6 +14,7 @@ const LANE_LIMIT = 9.5
 const HIT_SPEED_FLOOR = 50
 /** 高速失控阈值 */
 const UNSTABLE_SPEED = 250
+const SWING_DURATION = 0.28
 
 interface Racer {
   mesh: THREE.Group
@@ -44,6 +43,13 @@ interface Racer {
   topSpeed: number
   turnMult: number
   weaponRoot: THREE.Group | null
+  rightArmPivot: THREE.Group | null
+  /** 挥击动画剩余时间 */
+  swingT: number
+  /** AI 侵略性 0~1 */
+  aggression: number
+  /** AI 巡航偏好速度 */
+  cruiseBias: number
 }
 
 interface FxItem {
@@ -85,6 +91,8 @@ export class RoadRashEngine {
   private elapsed = 0
   private baseFov = 56
   private shake = 0
+  private audio = new GameAudio()
+  private finishSfxPlayed = false
 
   private onKeyDown = (e: KeyboardEvent) => this.handleKey(e, true)
   private onKeyUp = (e: KeyboardEvent) => this.handleKey(e, false)
@@ -101,6 +109,19 @@ export class RoadRashEngine {
     this.character = character
     this.onHud = onHud
     this.init()
+  }
+
+  /** 供 UI 切换静音 */
+  setMuted(muted: boolean) {
+    this.audio.setMuted(muted)
+  }
+
+  toggleMute(): boolean {
+    return this.audio.toggleMute()
+  }
+
+  isMuted(): boolean {
+    return this.audio.muted
   }
 
   private init() {
@@ -143,6 +164,9 @@ export class RoadRashEngine {
     window.addEventListener('keydown', this.onKeyDown)
     window.addEventListener('keyup', this.onKeyUp)
     window.addEventListener('resize', this.onResize)
+
+    // 用户手势路径内启动音频（发车按钮触发构造）
+    void this.audio.start()
 
     this.clock.start()
     this.loop()
@@ -311,81 +335,9 @@ export class RoadRashEngine {
     }
   }
 
-  private createBike(color: number, riderColor: number, isPlayer: boolean): THREE.Group {
-    const g = new THREE.Group()
-
-    const body = new THREE.Mesh(
-      new THREE.BoxGeometry(1.1, 0.45, 2.2),
-      new THREE.MeshLambertMaterial({ color })
-    )
-    body.position.y = 0.75
-    body.castShadow = true
-    g.add(body)
-
-    const tank = new THREE.Mesh(
-      new THREE.BoxGeometry(0.7, 0.35, 0.9),
-      new THREE.MeshLambertMaterial({ color: isPlayer ? 0xffdd55 : color })
-    )
-    tank.position.set(0, 1.05, 0.15)
-    g.add(tank)
-
-    const seat = new THREE.Mesh(
-      new THREE.BoxGeometry(0.55, 0.2, 0.7),
-      new THREE.MeshLambertMaterial({ color: 0x222222 })
-    )
-    seat.position.set(0, 1.0, -0.55)
-    g.add(seat)
-
-    const wheelGeo = new THREE.TorusGeometry(0.38, 0.12, 8, 16)
-    const wheelMat = new THREE.MeshLambertMaterial({ color: 0x111111 })
-    const front = new THREE.Mesh(wheelGeo, wheelMat)
-    front.rotation.y = Math.PI / 2
-    front.position.set(0, 0.38, 0.85)
-    g.add(front)
-    const rear = front.clone()
-    rear.position.z = -0.85
-    g.add(rear)
-
-    const rider = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.22, 0.55, 4, 8),
-      new THREE.MeshLambertMaterial({ color: riderColor })
-    )
-    rider.position.set(0, 1.45, -0.15)
-    rider.castShadow = true
-    g.add(rider)
-
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.22, 10, 10),
-      new THREE.MeshLambertMaterial({ color: isPlayer ? 0xffccaa : 0xddbb99 })
-    )
-    head.position.set(0, 1.95, -0.05)
-    g.add(head)
-
-    const lamp = new THREE.Mesh(
-      new THREE.BoxGeometry(0.25, 0.18, 0.1),
-      new THREE.MeshBasicMaterial({ color: 0xffffaa })
-    )
-    lamp.position.set(0, 0.9, 1.15)
-    g.add(lamp)
-
-    return g
-  }
-
   private attachWeapon(racer: Racer, weapon: string | null) {
-    if (racer.weaponRoot) {
-      racer.mesh.remove(racer.weaponRoot)
-      racer.weaponRoot.traverse((obj) => {
-        if (obj instanceof THREE.Mesh) {
-          obj.geometry?.dispose()
-          if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose())
-          else obj.material?.dispose()
-        }
-      })
-      racer.weaponRoot = null
-    }
-    const held = createHeldWeapon(weapon)
-    racer.mesh.add(held)
-    racer.weaponRoot = held
+    if (!racer.rightArmPivot) return
+    racer.weaponRoot = attachWeaponToArm(racer.rightArmPivot, weapon)
     racer.weapon = weapon
   }
 
@@ -402,18 +354,28 @@ export class RoadRashEngine {
    */
   private speedToProgress(speed: number): number {
     const t = THREE.MathUtils.clamp(speed / GLOBAL_MAX_SPEED, 0, 1)
-    // 指数曲线：高段加速更明显
-    return (Math.pow(t, 1.55) * 36 + t * 8) 
+    // 更快推进：高段冲刺更刺激
+    return Math.pow(t, 1.45) * 48 + t * 12
   }
 
   private spawnRacers() {
     const c = this.character
-    const palette = [0xff4444, 0x44aa88, 0xaa66ff, 0xff8800, 0x44aaff, 0xee4488]
-    const names = ['赤影', '狂风', '夜刃', '铁拳', '闪电', '修罗']
-    const riderColors = [0x7f1d1d, 0x14532d, 0x4c1d95, 0x9a3412, 0x1e3a8a, 0x9d174d]
+    const palette = [
+      0xff4444, 0x44aa88, 0xaa66ff, 0xff8800, 0x44aaff, 0xee4488, 0x22c55e, 0xf59e0b, 0x06b6d4,
+      0xe11d48,
+    ]
+    const names = [
+      '赤影', '狂风', '夜刃', '铁拳', '闪电', '修罗', '幽灵', '毒刺', '烈焰', '寒冰',
+      '狂徒', '猎手', '战斧', '影武', '雷霆', '黑骑', '狼牙', '疾风', '碎骨', '魔爪',
+    ]
+    const riderColors = [
+      0x7f1d1d, 0x14532d, 0x4c1d95, 0x9a3412, 0x1e3a8a, 0x9d174d, 0x166534, 0x854d0e, 0x155e75,
+      0x881337,
+    ]
 
+    const playerBuild = createMotorcycle(c.color, c.riderColor, true)
     this.player = {
-      mesh: this.createBike(c.color, c.riderColor, true),
+      mesh: playerBuild.root,
       name: c.name,
       isPlayer: true,
       speed: 0,
@@ -437,41 +399,53 @@ export class RoadRashEngine {
       topSpeed: c.topSpeed,
       turnMult: c.turnMult,
       weaponRoot: null,
+      rightArmPivot: playerBuild.rightArmPivot,
+      swingT: 0,
+      aggression: 1,
+      cruiseBias: 1,
     }
     this.attachWeapon(this.player, c.startWeapon)
     this.applyRacerPose(this.player)
     this.scene.add(this.player.mesh)
     this.racers.push(this.player)
 
-    for (let i = 0; i < this.map.racerCount; i++) {
+    const count = Math.max(this.map.racerCount, NPC_COUNT)
+    for (let i = 0; i < count; i++) {
       const color = palette[i % palette.length]
-      const top = 200 + Math.random() * 70
-      const npcWeapon = Math.random() > 0.45 ? (Math.random() > 0.5 ? '链锤' : '铁棍') : null
+      // 整体更强：多数 NPC 极速 240~295
+      const top = 240 + Math.random() * 55
+      const npcWeapon =
+        Math.random() > 0.35 ? (Math.random() > 0.5 ? '链锤' : '铁棍') : null
+      const build = createMotorcycle(color, riderColors[i % riderColors.length], false)
       const npc: Racer = {
-        mesh: this.createBike(color, riderColors[i % riderColors.length], false),
-        name: names[i % names.length],
+        mesh: build.root,
+        name: names[i % names.length] + (i >= names.length ? `${i}` : ''),
         isPlayer: false,
-        speed: 80 + Math.random() * 40,
-        targetSpeed: 140 + Math.random() * 100,
-        hp: 80 + Math.floor(Math.random() * 40),
-        maxHp: 100,
-        progress: 10 + i * 7 + Math.random() * 5,
-        lane: (Math.random() - 0.5) * LANE_LIMIT * 1.5,
+        speed: 140 + Math.random() * 50,
+        targetSpeed: 200 + Math.random() * 60,
+        hp: 90 + Math.floor(Math.random() * 40),
+        maxHp: 120,
+        progress: 6 + i * 4.2 + Math.random() * 3,
+        lane: ((i % 7) - 3) * 1.2 + (Math.random() - 0.5) * 0.8,
         stun: 0,
         weapon: npcWeapon,
-        attackCd: 0,
+        attackCd: Math.random() * 0.5,
         alive: true,
         color,
         finished: false,
         finishTime: 0,
-        attackMult: 0.9 + Math.random() * 0.3,
-        attackRangeMult: 1,
-        defenseMult: 1,
-        accelMult: 0.9 + Math.random() * 0.3,
-        baseTopSpeed: Math.min(GLOBAL_MAX_SPEED - 10, top),
-        topSpeed: Math.min(GLOBAL_MAX_SPEED - 10, top),
-        turnMult: 0.9 + Math.random() * 0.3,
+        attackMult: 0.95 + Math.random() * 0.35,
+        attackRangeMult: 1 + Math.random() * 0.15,
+        defenseMult: 0.9 + Math.random() * 0.2,
+        accelMult: 1.0 + Math.random() * 0.35,
+        baseTopSpeed: Math.min(GLOBAL_MAX_SPEED - 5, top),
+        topSpeed: Math.min(GLOBAL_MAX_SPEED - 5, top),
+        turnMult: 0.95 + Math.random() * 0.35,
         weaponRoot: null,
+        rightArmPivot: build.rightArmPivot,
+        swingT: 0,
+        aggression: 0.45 + Math.random() * 0.55,
+        cruiseBias: 0.85 + Math.random() * 0.25,
       }
       npc.maxHp = npc.hp
       this.refreshTopSpeed(npc)
@@ -497,6 +471,23 @@ export class RoadRashEngine {
     r.mesh.rotation.y = w.yaw
     r.mesh.rotation.x = w.pitch
     r.mesh.rotation.z = THREE.MathUtils.clamp(-r.lane * 0.03, -0.28, 0.28)
+
+    // 右臂挥击动画
+    if (r.rightArmPivot) {
+      if (r.swingT > 0) {
+        const p = 1 - r.swingT / SWING_DURATION
+        // 先扬起再砸下
+        const swing =
+          p < 0.35
+            ? THREE.MathUtils.lerp(0, -1.1, p / 0.35)
+            : THREE.MathUtils.lerp(-1.1, 1.35, (p - 0.35) / 0.65)
+        r.rightArmPivot.rotation.x = swing
+        r.rightArmPivot.rotation.z = THREE.MathUtils.lerp(0, -0.9, Math.sin(p * Math.PI))
+        r.rightArmPivot.rotation.y = Math.sin(p * Math.PI) * 0.6
+      } else {
+        r.rightArmPivot.rotation.set(0, 0, 0)
+      }
+    }
   }
 
   private handleKey(e: KeyboardEvent, down: boolean) {
@@ -529,11 +520,22 @@ export class RoadRashEngine {
       this.checkFinish()
     }
 
+    this.updateSwingTimers(dt)
     this.updateVisuals(dt)
     this.updateSpeedFx(dt)
     this.updateCamera(dt)
+    this.audio.setEngineSpeed(this.player?.speed ?? 0)
     this.renderer.render(this.scene, this.camera)
     this.emitHud()
+  }
+
+  private updateSwingTimers(dt: number) {
+    for (const r of this.racers) {
+      if (r.swingT > 0) {
+        r.swingT = Math.max(0, r.swingT - dt)
+        this.applyRacerPose(r)
+      }
+    }
   }
 
   private updatePlayer(dt: number) {
@@ -598,6 +600,7 @@ export class RoadRashEngine {
   }
 
   private updateNpcs(dt: number) {
+    const player = this.player
     for (const r of this.racers) {
       if (r.isPlayer || !r.alive || r.finished) {
         if (!r.isPlayer) this.applyRacerPose(r)
@@ -608,26 +611,77 @@ export class RoadRashEngine {
 
       if (r.stun > 0) {
         r.stun -= dt
-        r.speed = Math.max(HIT_SPEED_FLOOR * 0.6, r.speed - 60 * dt)
+        r.speed = Math.max(HIT_SPEED_FLOOR * 0.7, r.speed - 55 * dt)
       } else {
-        r.targetSpeed =
-          150 + Math.sin(this.elapsed * 0.7 + r.progress * 0.01) * 40 + Math.random() * 10
-        r.targetSpeed = Math.min(r.topSpeed, r.targetSpeed)
+        // 智能巡航：保持高巡航，落后追赶，领先控速
+        const gap = player.progress - r.progress
+        let desired = r.topSpeed * (0.78 + 0.18 * r.cruiseBias)
+
+        if (gap > 25) {
+          // 落后较多：全力追
+          desired = r.topSpeed * (0.92 + 0.08 * r.aggression)
+        } else if (gap > 5) {
+          desired = r.topSpeed * (0.86 + 0.1 * r.aggression)
+        } else if (gap < -40) {
+          // 大幅领先：略微收油仍保持高速
+          desired = r.topSpeed * 0.8
+        }
+
+        // 附近有对手时尝试抢道超车
+        let blockLeft = false
+        let blockRight = false
+        let attackTarget: Racer | null = null
+        for (const o of this.racers) {
+          if (o === r || !o.alive || o.finished) continue
+          const dz = o.progress - r.progress
+          const dx = o.lane - r.lane
+          if (dz > 0 && dz < 14 && Math.abs(dx) < 2.2) {
+            if (dx >= 0) blockRight = true
+            else blockLeft = true
+          }
+          if (Math.abs(dz) < 7 && Math.abs(dx) < 3.8) {
+            if (!attackTarget || Math.abs(dz) < Math.abs(attackTarget.progress - r.progress)) {
+              attackTarget = o
+            }
+          }
+        }
+
+        r.targetSpeed = Math.min(r.topSpeed, desired + Math.sin(this.elapsed * 0.8 + r.progress * 0.01) * 12)
+        const accelRate = 70 * r.accelMult * (1 + r.aggression * 0.25)
         r.speed +=
           Math.sign(r.targetSpeed - r.speed) *
-          Math.min(Math.abs(r.targetSpeed - r.speed), 50 * r.accelMult * dt)
+          Math.min(Math.abs(r.targetSpeed - r.speed), accelRate * dt)
         r.speed = Math.min(r.speed, r.topSpeed)
 
-        r.lane += Math.sin(this.elapsed * 0.9 + r.progress * 0.02) * 2.5 * r.turnMult * dt
+        // 变道：避开前车 + 轻微游荡
+        let steer = Math.sin(this.elapsed * 0.7 + r.progress * 0.015) * 1.2 * r.turnMult
+        if (blockLeft && !blockRight) steer += 3.5
+        else if (blockRight && !blockLeft) steer -= 3.5
+        else if (blockLeft && blockRight) desired *= 0.9
+        // 向玩家侧靠近以便攻击
+        if (attackTarget && r.aggression > 0.5) {
+          steer += Math.sign(attackTarget.lane - r.lane) * 2.2 * r.aggression
+        }
+        r.lane += steer * dt
         r.lane = THREE.MathUtils.clamp(r.lane, -LANE_LIMIT, LANE_LIMIT)
 
-        if (r.attackCd <= 0 && Math.random() < 0.018) this.doAttack(r)
+        // 智能攻击：范围内且冷却好
+        if (r.attackCd <= 0 && attackTarget) {
+          const profile = resolveWeapon(r.weapon)
+          const dz = Math.abs(attackTarget.progress - r.progress)
+          const dx = Math.abs(attackTarget.lane - r.lane)
+          const inRange =
+            dz < profile.range * r.attackRangeMult && dx < profile.sideRange * r.attackRangeMult
+          if (inRange && Math.random() < 0.04 + r.aggression * 0.06) {
+            this.doAttack(r)
+          }
+        }
       }
 
       const t = sampleTrack(r.progress, this.map)
       const grade = Math.sin(t.pitch)
-      if (grade > 0.02) r.speed = Math.max(30, r.speed - grade * 40 * dt)
-      if (grade < -0.02) r.speed = Math.min(r.topSpeed, r.speed - grade * 30 * dt)
+      if (grade > 0.02) r.speed = Math.max(40, r.speed - grade * 35 * dt)
+      if (grade < -0.02) r.speed = Math.min(r.topSpeed, r.speed - grade * 28 * dt)
 
       r.progress += this.speedToProgress(r.speed) * dt
       if (r.attackCd > 0) r.attackCd -= dt
@@ -638,14 +692,15 @@ export class RoadRashEngine {
   private doAttack(attacker: Racer) {
     const profile = resolveWeapon(attacker.weapon)
     attacker.attackCd = profile.cooldown
+    attacker.swingT = SWING_DURATION
+    this.audio.playAttack(attacker.weapon)
 
     const range = profile.range * attacker.attackRangeMult
     const sideRange = profile.sideRange * attacker.attackRangeMult
-    // 伤害整体下调；高速仍有加成但更克制
     const speedFactor = 0.38 + (attacker.speed / GLOBAL_MAX_SPEED) * 1.05
     const damage = Math.max(1, Math.round(profile.baseDamage * speedFactor * attacker.attackMult))
 
-    // 武器挥砍特效（区分徒手 / 铁棍 / 链锤）
+    // 武器挥砍世界特效
     const swing = createSwingEffect(attacker.weapon)
     const swingPos = trackToWorld(attacker.progress + 1.2, attacker.lane, this.map, 1.25)
     swing.position.set(swingPos.x, swingPos.y, swingPos.z)
@@ -653,7 +708,6 @@ export class RoadRashEngine {
     this.scene.add(swing)
     this.fx.push({ mesh: swing, life: 0.28, maxLife: 0.28, grow: 1.08 })
 
-    // 攻击弧光
     const arcPos = trackToWorld(attacker.progress + 0.6, attacker.lane, this.map, 0.35)
     const arc = new THREE.Mesh(
       new THREE.RingGeometry(0.8, range * 0.28, 28, 1, 0, Math.PI * 1.2),
@@ -672,6 +726,7 @@ export class RoadRashEngine {
 
     let hitAny = false
     let totalHitDmg = 0
+    let healed = 0
     for (const target of this.racers) {
       if (target === attacker || !target.alive || target.finished) continue
       const dz = Math.abs(target.progress - attacker.progress)
@@ -680,15 +735,25 @@ export class RoadRashEngine {
         const dealt = this.applyHit(target, damage, attacker, profile.hitColor)
         hitAny = true
         totalHitDmg += dealt
+        // 击中回血，血量提升后极速上限同步提高
+        if (attacker.alive) {
+          const before = attacker.hp
+          attacker.hp = Math.min(attacker.maxHp, attacker.hp + profile.lifesteal)
+          healed += attacker.hp - before
+          this.refreshTopSpeed(attacker)
+        }
       }
     }
 
     if (attacker.isPlayer) {
-      this.setMessage(
-        hitAny
-          ? `${profile.label}命中！-${totalHitDmg}`
-          : `${profile.label}落空…`
-      )
+      if (hitAny) {
+        const healTip = healed > 0 ? ` · 回血+${Math.round(healed)}` : ''
+        this.setMessage(`${profile.label}命中！-${totalHitDmg}${healTip}`)
+        if (healed > 0) this.audio.playHeal()
+      } else {
+        this.setMessage(`${profile.label}落空…`)
+        this.audio.playMiss()
+      }
     }
 
     if (hitAny && attacker.isPlayer && !attacker.weapon && Math.random() < 0.14) {
@@ -707,12 +772,12 @@ export class RoadRashEngine {
     target.hp = Math.max(0, target.hp - finalDmg)
     target.stun = 0.4
     this.refreshTopSpeed(target)
+    this.audio.playHit()
 
     // 被打瞬间速度减半，但不低于 50
     if (target.speed > HIT_SPEED_FLOOR) {
       target.speed = Math.max(HIT_SPEED_FLOOR, target.speed * 0.5)
     }
-    // 同时不能超过因血量下降后的极速
     target.speed = Math.min(target.speed, Math.max(HIT_SPEED_FLOOR, target.topSpeed))
 
     target.lane += (target.lane >= attacker.lane ? 1 : -1) * 0.85
@@ -720,7 +785,6 @@ export class RoadRashEngine {
 
     const pos = trackToWorld(target.progress, target.lane, this.map, 1.5)
 
-    // 命中爆点
     const burst = new THREE.Mesh(
       new THREE.SphereGeometry(0.55, 12, 12),
       new THREE.MeshBasicMaterial({ color: hitColor, transparent: true, opacity: 1 })
@@ -729,7 +793,6 @@ export class RoadRashEngine {
     this.scene.add(burst)
     this.fx.push({ mesh: burst, life: 0.4, maxLife: 0.4, grow: 1.15 })
 
-    // 冲击波环
     const wave = new THREE.Mesh(
       new THREE.RingGeometry(0.3, 0.9, 24),
       new THREE.MeshBasicMaterial({
@@ -744,21 +807,20 @@ export class RoadRashEngine {
     this.scene.add(wave)
     this.fx.push({ mesh: wave, life: 0.35, maxLife: 0.35, grow: 1.18 })
 
-    // 飘字伤害
-    const label = createDamageLabel(finalDmg, '#ffe566')
+    const label = createDamageLabel(`-${finalDmg}`, '#ffe566')
     label.position.set(pos.x, pos.y + 0.8, pos.z)
     this.scene.add(label)
     this.fx.push({ mesh: label, life: 0.9, maxLife: 0.9, vy: 2.2 })
 
-    // 受击闪白
     target.mesh.traverse((obj) => {
       if (obj instanceof THREE.Mesh && obj.material && 'emissive' in obj.material) {
-        const mat = obj.material as THREE.MeshLambertMaterial
+        const mat = obj.material as THREE.MeshStandardMaterial
         if (mat.emissive) {
+          const prev = mat.emissive.getHex()
           mat.emissive.setHex(0xff3300)
-          setTimeout(() => {
+          window.setTimeout(() => {
             try {
-              mat.emissive.setHex(0x000000)
+              mat.emissive.setHex(prev)
             } catch {
               /* disposed */
             }
@@ -770,6 +832,7 @@ export class RoadRashEngine {
     if (target.hp <= 0) {
       target.alive = false
       target.speed = 0
+      this.audio.playKnockout()
       if (attacker.isPlayer) this.setMessage(`${target.name} 被击倒！`)
       if (target.isPlayer) {
         this.setMessage('你被击倒了，比赛结束')
@@ -953,6 +1016,11 @@ export class RoadRashEngine {
         r.finishTime = this.elapsed + (this.map.trackLength - r.progress) / Math.max(r.speed, 40)
       }
     }
+    if (!this.finishSfxPlayed) {
+      this.finishSfxPlayed = true
+      if (this.player.finished || this.player.alive) this.audio.playFinish()
+      this.audio.setEngineSpeed(0)
+    }
   }
 
   private computeScore(): { score: number; rank: number; list: HudState['rankList'] } {
@@ -1034,6 +1102,7 @@ export class RoadRashEngine {
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('keyup', this.onKeyUp)
     window.removeEventListener('resize', this.onResize)
+    this.audio.dispose()
     this.renderer.dispose()
     if (this.renderer.domElement.parentElement === this.container) {
       this.container.removeChild(this.renderer.domElement)
