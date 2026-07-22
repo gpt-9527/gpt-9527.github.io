@@ -341,11 +341,9 @@ export class RoadRashEngine {
     racer.weapon = weapon
   }
 
-  /** 血量越低，极速上限越低 */
+  /** 极速只由角色/车辆 baseTopSpeed 决定，不受当前血量影响（避免残血永远追不上） */
   private refreshTopSpeed(r: Racer) {
-    const ratio = r.maxHp > 0 ? r.hp / r.maxHp : 0
-    // 满血 100% 极速，残血最低保留约 42% 极速
-    r.topSpeed = r.baseTopSpeed * (0.42 + 0.58 * Math.max(0, ratio))
+    r.topSpeed = r.baseTopSpeed
   }
 
   /**

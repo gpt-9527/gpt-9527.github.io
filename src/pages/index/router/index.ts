@@ -42,6 +42,11 @@ const routes: Array<RouteRecordRaw> = [
         name: 'RoadRash',
         component: () => import('../views/games/RoadRash.vue')
     },
+     {
+        path: '/Games/CS16Shooter',
+        name: 'CS16Shooter',
+        component: () => import('../views/games/CS16Shooter.vue')
+    },
     {
         path: '/GuangYaPan',
         name: 'GuangYaPan',

@@ -80,6 +80,17 @@ const games: GameItem[] = [
     route: '/Games/RoadRash',
     badge: '热门',
   },
+  {
+    id: 'cs16-shooter',
+    title: '战术射击：CS 复刻',
+    description: '经典 CS1.6 体验。AK/M4 弹道、拆弹、经济系统，HTML5 + Three.js 重制。',
+    emoji: '🔫',
+    cover: 'linear-gradient(135deg, #1e293b 0%, #475569 50%, #0f172a 100%)',
+    engine: 'Three.js',
+    genre: 'FPS / 战术射击',
+    route: '/Games/CS16Shooter',
+    badge: '新品',
+  },
 ]
 
 const goGame = (game: GameItem) => {
