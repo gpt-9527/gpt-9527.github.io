@@ -102,6 +102,17 @@ const games: GameItem[] = [
     route: '/Games/SpiderSolitaire',
     badge: '新品',
   },
+  {
+    id: 'thirteen',
+    title: '十三张',
+    description: '四人斗三墩。头中尾理牌比大小，冲三、打枪、全垒打，特殊牌型免比，初始 100 万游戏币单注 100。',
+    emoji: '🃏',
+    cover: 'linear-gradient(135deg, #7c2d12 0%, #b45309 45%, #1c1917 100%)',
+    engine: 'Vue',
+    genre: '纸牌 / 棋牌',
+    route: '/Games/Thirteen',
+    badge: '新品',
+  },
 ]
 
 const goGame = (game: GameItem) => {

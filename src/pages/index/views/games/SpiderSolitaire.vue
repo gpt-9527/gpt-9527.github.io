@@ -563,17 +563,38 @@ onBeforeUnmount(() => {
 .select-main {
   flex: 1;
   width: 100%;
-  max-width: 960px;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 1.5rem 1.25rem 3rem;
+  padding: 0 1.25rem 3.5rem;
   box-sizing: border-box;
 }
 
 .page-toolbar {
-  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
+  padding: 1.1rem 0 0.4rem;
+  margin-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.back-link,
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  cursor: pointer;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  transition: background 0.2s, color 0.2s;
+}
+
+.back-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
 .tool-btn.ghost {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -584,7 +605,6 @@ onBeforeUnmount(() => {
   font-size: 0.9rem;
 }
 
-.back-link:hover,
 .tool-btn.ghost:hover {
   border-color: #86efac;
   color: #fff;
@@ -592,6 +612,7 @@ onBeforeUnmount(() => {
 
 .page-intro {
   text-align: center;
+  padding: 1.25rem 0 0.5rem;
   margin-bottom: 2rem;
 }
 
@@ -602,6 +623,8 @@ onBeforeUnmount(() => {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  height: 2.2rem;
+  line-height: 2.2rem;
 }
 
 .page-intro .sub {

@@ -53,6 +53,11 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('../views/games/SpiderSolitaire.vue')
     },
     {
+        path: '/Games/Thirteen',
+        name: 'Thirteen',
+        component: () => import('../views/games/Thirteen.vue')
+    },
+    {
         path: '/GuangYaPan',
         name: 'GuangYaPan',
         component: GuangYaPan

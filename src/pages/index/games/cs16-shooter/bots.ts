@@ -1,19 +1,41 @@
+/**
+ * CS16 Bot AI — 5v5 商业化版本
+ * - 双方队伍均由 Bot 组成（玩家所在队 4 名队友 + 玩家）
+ * - Bot 感知所有敌方实体（玩家 / 敌方 bot），选择最近可见目标交火
+ * - 巡逻目标偏向炸弹点，制造攻防节奏
+ * - 阵亡倒地而非消失，回合重生复位
+ */
 import * as THREE from 'three'
 import type { BotEntity, ColliderBox, SpawnPoint, TeamId } from './types'
 import { BOT_WEAPON } from './weapons'
 import { PLAYER_RADIUS, resolveHorizontalCollision } from './player'
-import { animateSoldier, createSoldierMesh } from './models'
+import { animateSoldier, createNameTag, createSoldierMesh, playDeathPose, resetPose } from './models'
 
-const BOT_NAMES = ['Rush', 'Flash', 'Ghost', 'Viper', 'Hawk', 'Blaze', 'Nova', 'Echo']
+const BOT_NAMES_CT = ['Nova', 'Falcon', 'Vortex', 'Titan']
+const BOT_NAMES_T = ['Rush', 'Ghost', 'Blaze', 'Viper']
 
-function pickPatrolTarget(bot: BotEntity, anchor: THREE.Vector3) {
+function pickPatrolTarget(
+  bot: BotEntity,
+  bombSites: { position: { x: number; z: number } }[],
+) {
+  // 30% 偏向包点附近巡逻（制造攻防交火），其余在自身周边游走
+  if (bombSites.length > 0 && Math.random() < 0.3) {
+    const site = bombSites[Math.floor(Math.random() * bombSites.length)]
+    bot.patrolTarget.set(
+      site.position.x + (Math.random() - 0.5) * 16,
+      0,
+      site.position.z + (Math.random() - 0.5) * 16,
+    )
+    return
+  }
   bot.patrolTarget.set(
-    anchor.x + (Math.random() - 0.5) * 24,
+    bot.mesh.position.x + (Math.random() - 0.5) * 26,
     0,
-    anchor.z + (Math.random() - 0.5) * 24,
+    bot.mesh.position.z + (Math.random() - 0.5) * 26,
   )
 }
 
+/** 视线检测：从眼部到目标点逐段探测 AABB */
 function canSeeTarget(
   from: THREE.Vector3,
   to: THREE.Vector3,
@@ -24,11 +46,10 @@ function canSeeTarget(
   if (dist > BOT_WEAPON.range) return false
   dir.normalize()
 
-  const steps = Math.ceil(dist / 1.2)
+  const steps = Math.ceil(dist / 1.1)
   const probe = new THREE.Vector3()
   for (let i = 1; i < steps; i++) {
-    probe.copy(from).addScaledVector(dir, i * 1.2)
-    probe.y = 1.2
+    probe.copy(from).addScaledVector(dir, i * 1.1)
     for (const box of colliders) {
       if (
         probe.x > box.min.x &&
@@ -45,20 +66,29 @@ function canSeeTarget(
   return true
 }
 
-export function spawnBots(
-  team: TeamId,
-  spawns: SpawnPoint[],
-  count: number,
-  scene: THREE.Scene,
-): BotEntity[] {
+export interface SpawnBotsOptions {
+  team: TeamId
+  spawns: SpawnPoint[]
+  count: number
+  scene: THREE.Scene
+  showNameTags?: boolean
+}
+
+export function spawnBots(opts: SpawnBotsOptions): BotEntity[] {
+  const { team, spawns, count, scene } = opts
   const bots: BotEntity[] = []
+  const names = team === 'ct' ? BOT_NAMES_CT : BOT_NAMES_T
 
   for (let i = 0; i < count; i++) {
-    const spawn = spawns[i % spawns.length]
-    const name = BOT_NAMES[i % BOT_NAMES.length]
+    const spawnPoint = spawns[i % spawns.length]
+    const name = `${names[i % names.length]}`
     const mesh = createSoldierMesh(team)
-    mesh.position.set(spawn.position.x, 0, spawn.position.z)
-    mesh.rotation.y = spawn.yaw
+    mesh.position.set(spawnPoint.position.x, 0, spawnPoint.position.z)
+    mesh.rotation.y = spawnPoint.yaw
+
+    if (opts.showNameTags !== false) {
+      mesh.add(createNameTag(name, team))
+    }
     scene.add(mesh)
 
     bots.push({
@@ -69,21 +99,32 @@ export function spawnBots(
       maxHp: 100,
       alive: true,
       position: mesh.position.clone(),
-      yaw: spawn.yaw,
+      yaw: spawnPoint.yaw,
       shootCd: 0.4 + Math.random() * 0.8,
       thinkCd: 0,
       state: 'patrol',
       patrolTarget: new THREE.Vector3(
-        spawn.position.x + (Math.random() - 0.5) * 16,
+        spawnPoint.position.x + (Math.random() - 0.5) * 16,
         0,
-        spawn.position.z + (Math.random() - 0.5) * 16,
+        spawnPoint.position.z + (Math.random() - 0.5) * 16,
       ),
       name,
       stepDist: 0,
+      kills: 0,
+      deathTimer: 0,
     })
   }
 
   return bots
+}
+
+export interface Combatant {
+  /** 玩家时为 null */
+  bot: BotEntity | null
+  team: TeamId
+  position: THREE.Vector3
+  alive: boolean
+  name: string
 }
 
 export interface BotUpdateCtx {
@@ -92,17 +133,37 @@ export interface BotUpdateCtx {
   playerPos: THREE.Vector3
   playerAlive: boolean
   playerTeam: TeamId
+  bombSites: { id: string; position: { x: number; z: number } }[]
   onBotShoot: (bot: BotEntity, direction: THREE.Vector3) => void
   onFootstep?: () => void
 }
 
 export function updateBots(bots: BotEntity[], ctx: BotUpdateCtx) {
-  const { dt, colliders, playerPos, playerAlive, playerTeam, onBotShoot, onFootstep } = ctx
+  const { dt, colliders, playerPos, playerAlive, playerTeam } = ctx
+
+  // 组装实体列表：玩家 + 全部 bot
+  const combatants: Combatant[] = [
+    {
+      bot: null,
+      team: playerTeam,
+      position: playerPos.clone(),
+      alive: playerAlive,
+      name: '你',
+    },
+    ...bots.map(b => ({
+      bot: b,
+      team: b.team,
+      position: b.position,
+      alive: b.alive,
+      name: b.name,
+    })),
+  ]
+
   const moveSpeed = 4.2
 
   for (const bot of bots) {
     if (!bot.alive) {
-      bot.mesh.visible = false
+      // 倒地淡出由 damageBot 处理姿态；这里保持可见
       continue
     }
     bot.mesh.visible = true
@@ -114,20 +175,29 @@ export function updateBots(bots: BotEntity[], ctx: BotUpdateCtx) {
     const prevZ = bot.mesh.position.z
     let moved = false
 
-    const isEnemy = bot.team !== playerTeam
-    const targetPos = playerPos.clone()
-    targetPos.y = 1.2
     const botAim = bot.position.clone()
-    botAim.y = 1.2
-    const distToPlayer = botAim.distanceTo(targetPos)
-    const seesPlayer =
-      isEnemy &&
-      playerAlive &&
-      distToPlayer < BOT_WEAPON.range &&
-      canSeeTarget(botAim, targetPos, colliders)
+    botAim.y = 1.25
 
-    if (seesPlayer) {
+    // —— 目标选择：最近的可见敌人（含玩家与敌方 bot）——
+    let target: Combatant | null = null
+    let targetDist = Infinity
+    for (const c of combatants) {
+      if (!c.alive || c.team === bot.team) continue
+      const aimTo = c.position.clone()
+      aimTo.y = 1.15
+      const d = botAim.distanceTo(aimTo)
+      if (d < targetDist && canSeeTarget(botAim, aimTo, colliders)) {
+        target = c
+        targetDist = d
+      }
+    }
+
+    if (target) {
       bot.state = 'combat'
+      const targetPos = target.position.clone()
+      targetPos.y = target.bot ? 1.15 : 0.95
+      const aimAt = targetPos.clone()
+
       const dir = new THREE.Vector3().subVectors(targetPos, botAim)
       dir.y = 0
       if (dir.lengthSq() > 0.001) {
@@ -136,16 +206,16 @@ export function updateBots(bots: BotEntity[], ctx: BotUpdateCtx) {
       }
 
       if (bot.shootCd <= 0) {
-        const shotDir = new THREE.Vector3().subVectors(targetPos, botAim).normalize()
+        const shotDir = new THREE.Vector3().subVectors(aimAt, botAim).normalize()
         shotDir.x += (Math.random() - 0.5) * BOT_WEAPON.spread
         shotDir.y += (Math.random() - 0.5) * BOT_WEAPON.spread * 0.6
         shotDir.z += (Math.random() - 0.5) * BOT_WEAPON.spread
         shotDir.normalize()
-        onBotShoot(bot, shotDir)
-        bot.shootCd = 60 / BOT_WEAPON.rpm
+        ctx.onBotShoot(bot, shotDir)
+        bot.shootCd = 60 / BOT_WEAPON.rpm + Math.random() * 0.12
       }
 
-      if (distToPlayer > 12) {
+      if (targetDist > 11) {
         const moveDir = dir.clone().normalize()
         bot.mesh.position.x += moveDir.x * moveSpeed * dt
         bot.mesh.position.z += moveDir.z * moveSpeed * dt
@@ -155,19 +225,18 @@ export function updateBots(bots: BotEntity[], ctx: BotUpdateCtx) {
     } else {
       bot.state = 'patrol'
       if (bot.thinkCd <= 0 || bot.mesh.position.distanceTo(bot.patrolTarget) < 1.5) {
-        pickPatrolTarget(bot, bot.mesh.position)
-        bot.thinkCd = 2 + Math.random() * 2
+        pickPatrolTarget(bot, ctx.bombSites)
+        bot.thinkCd = 2.2 + Math.random() * 2
       }
 
       const toPatrol = new THREE.Vector3().subVectors(bot.patrolTarget, bot.mesh.position)
       toPatrol.y = 0
-      const patrolDist = toPatrol.length()
-      if (patrolDist > 0.5) {
+      if (toPatrol.length() > 0.5) {
         toPatrol.normalize()
         bot.yaw = Math.atan2(toPatrol.x, toPatrol.z)
         bot.mesh.rotation.y = bot.yaw
-        bot.mesh.position.x += toPatrol.x * moveSpeed * 0.65 * dt
-        bot.mesh.position.z += toPatrol.z * moveSpeed * 0.65 * dt
+        bot.mesh.position.x += toPatrol.x * moveSpeed * 0.62 * dt
+        bot.mesh.position.z += toPatrol.z * moveSpeed * 0.62 * dt
         resolveHorizontalCollision(bot.mesh.position, PLAYER_RADIUS, 1.6, colliders)
         moved = true
       }
@@ -177,7 +246,7 @@ export function updateBots(bots: BotEntity[], ctx: BotUpdateCtx) {
     bot.stepDist += stepDelta
     if (moved && bot.stepDist > 0.85) {
       bot.stepDist = 0
-      onFootstep?.()
+      ctx.onFootstep?.()
     }
 
     animateSoldier(bot.mesh, moved, dt)
@@ -185,21 +254,28 @@ export function updateBots(bots: BotEntity[], ctx: BotUpdateCtx) {
   }
 }
 
+/**
+ * 对 bot 造成伤害。
+ * @param isHeadshot 爆头倍率已在外部计算完毕，这里只负责结算
+ * @returns true 表示本次击杀
+ */
 export function damageBot(bot: BotEntity, amount: number): boolean {
   if (!bot.alive) return false
   bot.hp = Math.max(0, bot.hp - amount)
   if (bot.hp <= 0) {
     bot.alive = false
-    bot.mesh.visible = false
+    playDeathPose(bot.mesh)
     return true
   }
   return false
 }
 
+/** 回合重生复位 */
 export function resetBot(bot: BotEntity, spawn: SpawnPoint) {
   bot.hp = bot.maxHp
   bot.alive = true
   bot.mesh.visible = true
+  resetPose(bot.mesh)
   bot.mesh.position.set(spawn.position.x, 0, spawn.position.z)
   bot.mesh.rotation.y = spawn.yaw
   bot.position.copy(bot.mesh.position)
@@ -207,5 +283,11 @@ export function resetBot(bot: BotEntity, spawn: SpawnPoint) {
   bot.shootCd = 0.5 + Math.random()
   bot.state = 'patrol'
   bot.stepDist = 0
-  pickPatrolTarget(bot, bot.mesh.position)
+  bot.deathTimer = 0
+  pickPatrolTarget(bot, [])
+}
+
+/** 统计存活人数 */
+export function countAlive(bots: BotEntity[]): number {
+  return bots.reduce((n, b) => n + (b.alive ? 1 : 0), 0)
 }

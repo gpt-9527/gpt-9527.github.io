@@ -4,6 +4,8 @@ export type WeaponMode = 'rifle' | 'sniper'
 
 export type RoundPhase = 'warmup' | 'combat' | 'over'
 
+export type WeaponCategory = 'pistol' | 'smg' | 'shotgun' | 'rifle' | 'sniper'
+
 export interface Vec3 {
   x: number
   y: number
@@ -42,21 +44,36 @@ export interface HudState {
   reserve: number
   weaponName: string
   kills: number
+  deaths: number
   round: number
   totalRounds: number
   ctScore: number
   tScore: number
   score: number
+  money: number
+  aliveCt: number
+  aliveT: number
+  roundTime: number
+  canBuy: boolean
+  ownedPrimary: string
+  ownedSecondary: string
+  slot: 'primary' | 'secondary'
   message: string
   finished: boolean
+  matchResult: '' | 'win' | 'lose'
   bombPlanted: boolean
   bombTimer: number
 }
 
+/** 武器配置：商业化数值（价格 / 分类 / 爆头系数） */
 export interface WeaponConfig {
   id: string
   name: string
+  category: WeaponCategory
+  price: number
   damage: number
+  /** 爆头伤害倍率 */
+  headshotMult: number
   rpm: number
   magSize: number
   reserve: number
@@ -74,7 +91,18 @@ export interface EngineOptions {
   team: TeamId
   weaponMode: WeaponMode
   onHudUpdate: (state: Partial<HudState>) => void
+  /** 击杀播报等游戏事件，供 Vue 层渲染 Killfeed 等 */
+  onEvent?: (event: GameEvent) => void
 }
+
+export type GameEvent =
+  | { type: 'kill'; killer: string; killerTeam: TeamId; victim: string; victimTeam: TeamId; weapon: string; headshot: boolean }
+  | { type: 'hit'; headshot: boolean }
+  | { type: 'buy'; item: string }
+  | { type: 'buyError'; reason: string }
+  | { type: 'roundStart'; round: number }
+  | { type: 'roundEnd'; winner: TeamId }
+  | { type: 'bombPlanted'; site: 'A' | 'B' }
 
 export interface BotEntity {
   id: number
@@ -91,4 +119,7 @@ export interface BotEntity {
   patrolTarget: import('three').Vector3
   name: string
   stepDist: number
+  kills: number
+  /** 阵亡倒地动画进度 */
+  deathTimer: number
 }

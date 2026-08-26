@@ -246,6 +246,125 @@ export class CS16Audio {
     thump.stop(t + 0.05)
   }
 
+  /** 命中标记：短促高频 click */
+  playHitmarker(headshot = false) {
+    if (!this.canPlay()) return
+    const t = this.ctx!.currentTime
+    const osc = this.ctx!.createOscillator()
+    osc.type = 'square'
+    osc.frequency.setValueAtTime(headshot ? 2400 : 1700, t)
+    const g = this.ctx!.createGain()
+    g.gain.setValueAtTime(0.09, t)
+    g.gain.exponentialRampToValueAtTime(0.001, t + (headshot ? 0.07 : 0.045))
+    osc.connect(g)
+    g.connect(this.sfxGain!)
+    osc.start(t)
+    osc.stop(t + 0.08)
+  }
+
+  /** 击杀确认：双音下行叮 */
+  playKillConfirm() {
+    if (!this.canPlay()) return
+    const t = this.ctx!.currentTime
+    for (const [freq, delay] of [[1320, 0], [880, 0.07]] as const) {
+      const osc = this.ctx!.createOscillator()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(freq, t + delay)
+      const g = this.ctx!.createGain()
+      g.gain.setValueAtTime(0.12, t + delay)
+      g.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.1)
+      osc.connect(g)
+      g.connect(this.sfxGain!)
+      osc.start(t + delay)
+      osc.stop(t + delay + 0.12)
+    }
+  }
+
+  /** 购买成功：收银双音 */
+  playBuy() {
+    if (!this.canPlay()) return
+    const t = this.ctx!.currentTime
+    for (const [freq, delay] of [[740, 0], [1108, 0.08]] as const) {
+      const osc = this.ctx!.createOscillator()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, t + delay)
+      const g = this.ctx!.createGain()
+      g.gain.setValueAtTime(0.14, t + delay)
+      g.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.16)
+      osc.connect(g)
+      g.connect(this.sfxGain!)
+      osc.start(t + delay)
+      osc.stop(t + delay + 0.18)
+    }
+  }
+
+  /** 购买失败：低频 buzz */
+  playBuyError() {
+    if (!this.canPlay()) return
+    const t = this.ctx!.currentTime
+    const osc = this.ctx!.createOscillator()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(160, t)
+    const g = this.ctx!.createGain()
+    g.gain.setValueAtTime(0.1, t)
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.18)
+    osc.connect(g)
+    g.connect(this.sfxGain!)
+    osc.start(t)
+    osc.stop(t + 0.2)
+  }
+
+  /** 回合开始哨音 */
+  playRoundStart() {
+    if (!this.canPlay()) return
+    const t = this.ctx!.currentTime
+    const osc = this.ctx!.createOscillator()
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(520, t)
+    osc.frequency.linearRampToValueAtTime(880, t + 0.25)
+    const g = this.ctx!.createGain()
+    g.gain.setValueAtTime(0.16, t)
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.45)
+    osc.connect(g)
+    g.connect(this.sfxGain!)
+    osc.start(t)
+    osc.stop(t + 0.5)
+  }
+
+  /** C4 已安放：急促三连哔 */
+  playBombPlanted() {
+    if (!this.canPlay()) return
+    const t = this.ctx!.currentTime
+    for (let i = 0; i < 3; i++) {
+      const osc = this.ctx!.createOscillator()
+      osc.type = 'square'
+      osc.frequency.setValueAtTime(990, t + i * 0.22)
+      const g = this.ctx!.createGain()
+      g.gain.setValueAtTime(0.13, t + i * 0.22)
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.22 + 0.12)
+      osc.connect(g)
+      g.connect(this.sfxGain!)
+      osc.start(t + i * 0.22)
+      osc.stop(t + i * 0.22 + 0.14)
+    }
+  }
+
+  /** C4 滴答倒计时（随剩余时间加快） */
+  playBombBeep() {
+    if (!this.canPlay()) return
+    const t = this.ctx!.currentTime
+    const osc = this.ctx!.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(1180, t)
+    const g = this.ctx!.createGain()
+    g.gain.setValueAtTime(0.08, t)
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.09)
+    osc.connect(g)
+    g.connect(this.sfxGain!)
+    osc.start(t)
+    osc.stop(t + 0.1)
+  }
+
   dispose() {
     this.disposed = true
     if (this.ambTimer != null) window.clearInterval(this.ambTimer)
