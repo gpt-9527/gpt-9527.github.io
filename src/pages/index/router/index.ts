@@ -48,6 +48,11 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('../views/games/CS16Shooter.vue')
     },
     {
+        path: '/Games/SpiderSolitaire',
+        name: 'SpiderSolitaire',
+        component: () => import('../views/games/SpiderSolitaire.vue')
+    },
+    {
         path: '/GuangYaPan',
         name: 'GuangYaPan',
         component: GuangYaPan

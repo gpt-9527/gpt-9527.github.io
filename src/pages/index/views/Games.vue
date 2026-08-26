@@ -91,6 +91,17 @@ const games: GameItem[] = [
     route: '/Games/CS16Shooter',
     badge: '新品',
   },
+  {
+    id: 'spider-solitaire',
+    title: '蜘蛛纸牌',
+    description: '经典 Windows 蜘蛛牌。双色 / 四色难度，同花色 K→A 收牌，发牌、撤销与提示一应俱全。',
+    emoji: '🕷️',
+    cover: 'linear-gradient(135deg, #14532d 0%, #166534 40%, #0f172a 100%)',
+    engine: 'Vue',
+    genre: '纸牌 / 益智',
+    route: '/Games/SpiderSolitaire',
+    badge: '新品',
+  },
 ]
 
 const goGame = (game: GameItem) => {
