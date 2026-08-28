@@ -24,12 +24,13 @@
           </el-button>
         </el-form-item>
       </el-form>
-      <div class="hint">Use any username/password to login for demo.</div>
+      <div class="hint">Use admin / 123456 to login for demo.</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import md5 from 'md5'
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -38,6 +39,9 @@ import type { FormInstance, FormRules } from 'element-plus'
 const router = useRouter()
 const loginFormRef = ref<FormInstance>()
 const loading = ref(false)
+
+const FIXED_USERNAME_MD5 = 'e45e5263c10b1ae4c29cfebdac3798a8'
+const FIXED_PASSWORD_MD5 = 'bcdbf49b6a17cafda2ca758e4318b391'
 
 const loginForm = reactive({
   username: '',
@@ -54,9 +58,19 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
   await formEl.validate((valid) => {
     if (valid) {
       loading.value = true
-      // Simulate API call
+
+      const usernameHash = md5(loginForm.username.trim())
+      const passwordHash = md5(loginForm.password)
+      const isValid = usernameHash === FIXED_USERNAME_MD5 && passwordHash === FIXED_PASSWORD_MD5
+
       setTimeout(() => {
-        localStorage.setItem('admin_token', 'demo-token-12345')
+        if (!isValid) {
+          loading.value = false
+          ElMessage.error('Username or password is incorrect')
+          return
+        }
+
+        localStorage.setItem('admin_token', `${FIXED_USERNAME_MD5}-${FIXED_PASSWORD_MD5}`)
         ElMessage.success('Login successfully')
         router.push('/dashboard')
         loading.value = false
