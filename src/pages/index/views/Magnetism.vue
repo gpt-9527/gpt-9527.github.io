@@ -48,7 +48,8 @@ const loading = ref(false)    // 加载状态控制
  * 核心方法：获取列表数据
  * 分页模式下，每次请求都会根据当前的 currentPage 覆盖旧数据
  */
-const proxyUrl = 'https://corsproxy.io/?'
+const proxyUrl = 'https://proxy.corsfix.com/?'
+// const proxyUrl = 'https://corsproxy.io/?key=69847d2a&url='
 const getList = async () => {
     if (loading.value) return
     loading.value = true
@@ -59,7 +60,8 @@ const getList = async () => {
       return
     }
     const fetchUrl = `${geturl}/search?q=${search.value}`
-    const proxyFetchUrl = `${proxyUrl}${encodeURIComponent(fetchUrl)}`
+    // const proxyFetchUrl = `${proxyUrl}${encodeURIComponent(fetchUrl)}`
+    const proxyFetchUrl = `${proxyUrl}${fetchUrl}`
     try {
         const response = await fetch(proxyFetchUrl, {
             method: 'GET',
@@ -96,7 +98,7 @@ const getMagnetLink = async (item: Magne) => {
   })
   try {
     const url = `${geturl}${item.link}`
-    const proxyFetchUrl = proxyUrl + encodeURIComponent(url)
+    const proxyFetchUrl = proxyUrl + url
 
     const res = await fetch(proxyFetchUrl, {
       method: 'GET',
