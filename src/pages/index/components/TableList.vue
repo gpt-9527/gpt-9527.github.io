@@ -5,6 +5,7 @@
                 <span class="name">{{ item.name }}</span>
                 <span class="link">{{ item.link }}</span>
                 <span class="size">{{ item.size }}</span>
+                <span class="date">{{ item.date }}</span>
                 <button class="primary-btn" @click="handleClick(item)">Get Magnet</button>
             </li>
         </ul>

@@ -48,8 +48,9 @@ const loading = ref(false)    // 加载状态控制
  * 核心方法：获取列表数据
  * 分页模式下，每次请求都会根据当前的 currentPage 覆盖旧数据
  */
-const proxyUrl = 'https://proxy.corsfix.com/?'
+// const proxyUrl = 'https://proxy.corsfix.com/?'
 // const proxyUrl = 'https://corsproxy.io/?key=69847d2a&url='
+const proxyUrl = 'https://seep.eu.org/'
 const getList = async () => {
     if (loading.value) return
     loading.value = true
@@ -76,8 +77,9 @@ const getList = async () => {
         list.value = items.map(item => {
             const name = item.querySelector('a')?.textContent?.trim() || '未知标题';
             const link = item.querySelector('a')?.getAttribute('href') || '#';
-            const size = item.querySelector('.td-size')?.textContent?.trim() || '未知大小'
-            return { name, link, size };
+            const size = item.querySelector('.result-meta div')?.textContent?.trim() || '未知大小'
+            const date = item.querySelector('.result-date')?.textContent?.trim() || '未知时间'
+            return { name, link, size, date };
         });
         console.log('获取到的列表数据:', list.value)
     } catch (error) {
